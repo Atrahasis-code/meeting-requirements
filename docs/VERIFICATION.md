@@ -32,3 +32,24 @@ Browser verification used headless Edge with synthetic API responses: desktop (1
 The backend origin and CORS policies now use the same explicit loopback allowlist. Regression coverage passes for POST/PATCH/DELETE and credentialed preflight from both `localhost` and `127.0.0.1`, with the configured scheme and port. External domains, lookalike hosts, other ports, other schemes, opaque origins, and cross-site writes remain rejected. Hosted domain configurations retain a single configured origin. OAuth connection attempts from the alternate loopback name move to canonical Settings before creating PKCE state; callback registration is unchanged.
 
 Verification: 61 backend tests passed (six separate-project skips), Ruff passed, and 26 frontend tests plus the TypeScript/Vite production build passed through isolated Compose projects. A separate Nginx/API stack on port 18089 accepted synthetic project creation, editing, and deletion from both loopback names and rejected external origins. No normal meeting data, OAuth credentials, or real analysis were used for these tests.
+
+## Automated localhost integration
+
+`sh scripts/test.sh` runs the full HTTP workflow through the production Nginx proxy. The integration runner shares the frontend's network namespace and connects to `http://localhost:8080` and `http://127.0.0.1:8080`; the test override removes published frontend ports, so the suite can run beside the normal installation without using its port or data. Use Docker Compose v2 with support for the `!reset` YAML tag.
+
+The regression creates its own project and meeting, validates a generated WAV with ffprobe, explicitly starts the Mock transcription worker, reviews the transcript, authorizes Mock analysis, checks the structured output and evidence, validates criteria independently of RF status, and verifies the persisted original, author and revision history. It downloads and checks the 11 Markdown documents plus reviewed transcript, citations and traceability, and confirms that an earlier export remains byte-identical. Preflight/credentialed CORS checks run for both loopback names; an external origin must still be rejected. No accounts, real inference, models, or new host tools are needed. This HTTP integration complements the existing React tests and browser verification; it does not automate browser clicks.
+
+The script accepts only `meeting-ai-test` or `meeting-ai-test-*` project names. Passing a normal installation name exits before invoking Compose. Successful cases delete only the project UUID they created; failed fixtures remain in the isolated test volumes for diagnosis. Teardown preserves volumes.
+
+Run just integration from the private master or independent community root:
+
+```sh
+docker compose -p meeting-ai-test-localhost -f compose.yaml -f compose.test.yaml build backend worker frontend initialize integration-tests
+docker compose -p meeting-ai-test-localhost -f compose.yaml -f compose.test.yaml up -d --wait backend worker frontend
+docker compose -p meeting-ai-test-localhost -f compose.yaml -f compose.test.yaml run --rm integration-tests
+docker compose -p meeting-ai-test-localhost -f compose.yaml -f compose.test.yaml down
+```
+
+The PostgreSQL test script uses the same proxy-based integration after its database checks.
+
+This regression delivery passed three HTTP integration cases through the master compatibility entrypoint and the independent community tree. The community script also passed 61 backend tests (eight expected integration/PostgreSQL skips), Ruff, and 26 React tests. PostgreSQL passed its 11 workflow/migration tests and the same three proxy integration cases. The normal installation remained running, with DEMO hashes checked separately.
