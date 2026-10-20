@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes, Link } from "react-router-dom";
 import {
   AudioLines,
@@ -29,14 +29,68 @@ import { SettingsPage } from "./pages/settings";
 export default function App({
   settingsPage,
   environmentLabel = "Entorno local",
+  privacyTitle = "Tu audio se queda aquí",
+  privacyDescription = "Transcripción local. Tú decides qué texto compartir.",
 }: {
   settingsPage?: ReactNode;
   environmentLabel?: string;
+  privacyTitle?: string;
+  privacyDescription?: string;
 }) {
   const [dark, setDark] = useState(
     () => localStorage.getItem("mra-theme") === "dark",
   );
   const [menu, setMenu] = useState(false);
+  const [mobile, setMobile] = useState(
+    () => window.matchMedia?.("(max-width: 760px)").matches ?? false,
+  );
+  const sidebar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const media = window.matchMedia?.("(max-width: 760px)");
+    if (!media) return;
+    const update = () => {
+      setMobile(media.matches);
+      setMenu(false);
+    };
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!menu || !mobile) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusable = () =>
+      Array.from(
+        sidebar.current?.querySelectorAll<HTMLElement>(
+          "a[href], button:not([disabled])",
+        ) ?? [],
+      ).filter((el) => el.getClientRects().length);
+    focusable()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenu(false);
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      const first = items[0],
+        last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      previous?.focus();
+    };
+  }, [menu, mobile]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("mra-theme", dark ? "dark" : "light");
@@ -44,7 +98,33 @@ export default function App({
   const health = useData<{ worker_online: boolean }>("/health", true);
   return (
     <div className="app-shell">
-      <aside className={"sidebar " + (menu ? "sidebar-open" : "")}>
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido
+      </a>
+      {mobile && menu && (
+        <button
+          className="nav-backdrop"
+          aria-label="Cerrar navegación"
+          onClick={() => setMenu(false)}
+          tabIndex={-1}
+        />
+      )}
+      <aside
+        ref={sidebar}
+        id="workspace-navigation"
+        aria-label="Navegación del espacio de trabajo"
+        role={mobile && menu ? "dialog" : undefined}
+        aria-modal={mobile && menu ? true : undefined}
+        inert={mobile && !menu}
+        className={"sidebar " + (menu ? "sidebar-open" : "")}
+      >
+        <button
+          className="icon-button mobile-menu sidebar-close"
+          aria-label="Cerrar navegación"
+          onClick={() => setMenu(false)}
+        >
+          <X size={20} />
+        </button>
         <Link to="/" className="brand">
           <span className="brand-icon">
             <AudioLines size={25} />
@@ -54,7 +134,7 @@ export default function App({
           </span>
         </Link>
         <div className="workspace-label">ESPACIO DE TRABAJO</div>
-        <nav>
+        <nav aria-label="Navegación principal">
           {[
             [LayoutDashboard, "/", "Vista general"],
             [FolderKanban, "/projects", "Proyectos"],
@@ -78,26 +158,32 @@ export default function App({
         <div className="sidebar-bottom">
           <div className="privacy-note">
             <ShieldCheck size={19} />
-            <strong>Tu audio se queda aquí</strong>
-            <p>Transcripción local. Tú decides qué texto compartir.</p>
+            <strong>{privacyTitle}</strong>
+            <p>{privacyDescription}</p>
           </div>
-          <div className="worker-status">
+          <div className="worker-status" role="status">
             <span
               className={
                 "status-dot " + (health.data?.worker_online ? "online" : "")
               }
             />
-            {health.data?.worker_online
-              ? "Worker disponible"
-              : "Worker sin conexión"}
+            {health.isPending
+              ? "Comprobando worker…"
+              : health.error
+                ? "Estado no disponible"
+                : health.data?.worker_online
+                  ? "Worker disponible"
+                  : "Worker sin conexión"}
           </div>
         </div>
       </aside>
-      <div className="main-shell">
+      <div className="main-shell" inert={mobile && menu}>
         <div className="topbar">
           <button
             className="icon-button mobile-menu"
-            aria-label="Menú"
+            aria-label="Abrir navegación"
+            aria-expanded={menu}
+            aria-controls="workspace-navigation"
             onClick={() => setMenu(!menu)}
           >
             {menu ? <X size={20} /> : <Menu size={20} />}
@@ -111,7 +197,7 @@ export default function App({
             </span>
             <button
               className="icon-button"
-              aria-label="Cambiar tema"
+              aria-label={dark ? "Activar tema claro" : "Activar tema oscuro"}
               onClick={() => setDark(!dark)}
             >
               {dark ? <Sun size={19} /> : <Moon size={19} />}
@@ -124,7 +210,7 @@ export default function App({
             </Button>
           </div>
         </div>
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />

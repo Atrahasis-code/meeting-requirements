@@ -22,6 +22,8 @@ secrets/
 *.srt
 *.vtt
 *.zip
+*.tar.gz
+*.tgz
 models/
 exports/
 transcripts/

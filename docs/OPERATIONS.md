@@ -7,14 +7,15 @@ Las herramientas de mantenimiento corren dentro de contenedores; no requieren ut
 Detén las escrituras y crea un archivo portable. No copies únicamente el archivo SQLite mientras los servicios escriben.
 
 ```sh
+mkdir -p backups
 docker compose stop backend worker
 docker compose run --name mra-backup --no-deps maintenance backup /tmp/meeting-backup.tar.gz
-docker cp mra-backup:/tmp/meeting-backup.tar.gz ./meeting-backup.tar.gz
+docker cp mra-backup:/tmp/meeting-backup.tar.gz ./backups/meeting-backup.tar.gz
 docker rm mra-backup
 docker compose start backend worker
 ```
 
-Para incluir modelos, añade `--include-models` al final del comando backup. Los enlaces internos del caché se guardan como archivos normales para permitir restauración sin red; esto puede aumentar el tamaño del paquete. Se excluyen los enlaces que apuntan fuera del volumen de modelos. El archivo contiene copia SQLite mediante su API de backup, archivos multimedia, transcripciones y exportaciones, más manifiesto y checksums SHA-256. No incluye autenticación ni tokens. Protege el backup porque sí contiene reuniones y datos corporativos.
+Para incluir modelos, añade `--include-models` al final del comando backup. Los enlaces internos del caché se guardan como archivos normales para permitir restauración sin red; esto puede aumentar el tamaño del paquete. Se excluyen los enlaces que apuntan fuera del volumen de modelos. El archivo contiene copia SQLite mediante su API de backup, archivos multimedia, transcripciones y exportaciones, más manifiesto y checksums SHA-256. No incluye autenticación ni tokens. Protege el backup porque sí contiene reuniones y datos corporativos. Guárdalo en `backups/`, excluido de Git y del contexto Docker. Los archivos `*.tar.gz` y `*.tgz` también se excluyen aunque se copien a otra carpeta; estas reglas no protegen archivos ya versionados ni sustituyen el control de acceso o cifrado del backup.
 
 No reinicies servicios hasta que termine la copia; los archivos y la base deben pertenecer al mismo período de mantenimiento. El bloqueo impide hacer backup con el worker activo; el operador también debe detener la API.
 
@@ -26,7 +27,7 @@ Selecciona un proyecto Compose nuevo; no sobrescribas una instalación con datos
 docker compose -p meeting-restored build backend worker frontend initialize maintenance
 docker compose -p meeting-restored run --rm --no-deps initialize python -m app.initialize --prepare-only
 docker compose -p meeting-restored run -d --name mra-restore --no-deps --entrypoint sleep maintenance infinity
-docker cp ./meeting-backup.tar.gz mra-restore:/tmp/meeting-backup.tar.gz
+docker cp ./backups/meeting-backup.tar.gz mra-restore:/tmp/meeting-backup.tar.gz
 docker exec mra-restore python -m app.maintenance restore /tmp/meeting-backup.tar.gz
 docker rm -f mra-restore
 docker compose -p meeting-restored up -d

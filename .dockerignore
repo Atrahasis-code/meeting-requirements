@@ -23,3 +23,7 @@ transcripts
 **/*.mp3
 **/*.wav
 **/*.zip
+
+# Portable backups may contain private meeting data.
+**/*.tar.gz
+**/*.tgz

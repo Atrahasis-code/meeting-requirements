@@ -1,4 +1,4 @@
-name: meeting-requirements-ai
+name: meeting-requirements-ai-local
 x-environment: &environment
   TMPDIR: /data/media/.incoming
   HF_HOME: /data/models/huggingface

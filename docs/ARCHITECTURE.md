@@ -5,7 +5,7 @@
 - Frontend React/TypeScript/Vite, Tailwind y componentes de patrón shadcn/ui sobre Radix. Router, TanStack Query y formularios React Hook Form/Zod. Nginx no root sirve la compilación y hace proxy de API/callback. Vite realiza el mismo proxy durante desarrollo.
 - FastAPI separa contratos Pydantic, acceso a datos, servicios de aplicación, almacenamiento, OAuth, análisis y exportación.
 - Worker dedicado con bloqueo `flock` en el volumen SQLite. Cada trabajo usa un proceso spawn aislado que libera memoria nativa al terminar. El supervisor mantiene heartbeat incluso durante inferencia.
-- SQLite local con claves foráneas, busy_timeout 5000, WAL y transacciones cortas. La inicialización de esquema ocurre con Alembic antes de los servicios principales. Un índice parcial impide dos trabajos running y otro impide trabajos activos duplicados para una reunión.
+- SQLite local con claves foráneas, busy_timeout 5000, WAL y transacciones cortas. La inicialización de esquema ocurre con Alembic antes de los servicios principales. El índice parcial `one_running_job` impide más de un trabajo `running` global. La API comprueba que la reunión no tenga trabajos activos antes de admitir otro; esta comprobación no constituye una restricción única transaccional por reunión. El bloqueo del worker mantiene la ejecución secuencial.
 
 La cola no usa Redis/Celery. Los trabajos nuevos solo aparecen por acciones manuales. Los estados internos están en inglés; la UI los traduce. Registered representa una reunión aún sin archivo. Blocked e interrupted complementan los estados solicitados y conservan el motivo y los checkpoints. Reiniciar solo la API no modifica un trabajo que sigue ejecutándose.
 
@@ -20,7 +20,7 @@ La cola no usa Redis/Celery. Los trabajos nuevos solo aparecen por acciones manu
 | models | /data/models | Modelos reutilizables de Hugging Face/CTranslate2 |
 | authentication | /data/auth | Host ID, registros OAuth y tokens de esta aplicación |
 
-Los nombres efectivos llevan el prefijo del proyecto Compose. `docker compose down` conserva los volúmenes. **No uses `down -v` con datos reales.** NFS/SMB/9p/virtiofs no están admitidos para SQLite. No remapees database a carpetas sincronizadas o compartidas entre equipos.
+El proyecto predeterminado es `meeting-requirements-ai-local`; los nombres efectivos de los volúmenes llevan ese prefijo. Para instalaciones adicionales usa un nombre distinto con `docker compose -p <nombre>` en todos los comandos y un `APP_PORT` disponible. Reutilizar un nombre de proyecto reutiliza sus volúmenes, incluida la autenticación. `docker compose down` conserva los volúmenes. **No uses `down -v` con datos reales.** NFS/SMB/9p/virtiofs no están admitidos para SQLite. No remapees database a carpetas sincronizadas o compartidas entre equipos.
 
 ## Transcripción y análisis
 

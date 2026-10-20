@@ -38,7 +38,6 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="TU ENTORNO"
         title="Configuración"
         description="Rendimiento local, conexión y consumo bajo tu control."
       />

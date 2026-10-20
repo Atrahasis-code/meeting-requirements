@@ -230,7 +230,6 @@ export function MeetingPage() {
   return (
     <>
       <PageHeader
-        eyebrow="REUNIONES / DETALLE"
         title={meeting.title}
         description={
           date(meeting.date) +
@@ -486,7 +485,6 @@ export function TranscriptPage() {
   return (
     <>
       <PageHeader
-        eyebrow="REVISIÓN / TRANSCRIPCIÓN"
         title={meeting.data.title}
         description="Escucha, comprueba y corrige. El texto original permanece conservado."
         actions={
@@ -703,7 +701,6 @@ export function ResultsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="ESPECIFICACIÓN / RESULTADOS"
         title={meeting.data.title}
         description="Hallazgos con evidencia. Revisión y aprobación bajo tu control."
         actions={
@@ -924,7 +921,11 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
             <span className="code">
               {c.code} · {c.story_code}
             </span>
-            <p className="muted">{criterionStatus(c.status)}</p>
+            <p>
+              <span className={"badge badge-" + c.status}>
+                {criterionStatus(c.status)}
+              </span>
+            </p>
             <CriterionActions
               criterion={c}
               active={run.active}

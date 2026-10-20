@@ -155,72 +155,82 @@ export function Dashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="TU ESPACIO DE TRABAJO"
-        title="Cada reunión, un paso adelante."
+        title="Vista general"
         description="Transforma conversaciones en requisitos claros, revisables y conectados con su origen."
       />
       <section className="overview-grid">
-        <div className="intro-card">
-          <div className="eyebrow">DE LA VOZ A LA ACCIÓN</div>
-          <h2>
-            Las buenas ideas
-            <br />
-            merecen un buen registro.
-          </h2>
-          <p>
-            Sube una grabación. Revisa lo que se dijo.
-            <br />
-            Construye una especificación con evidencia.
-          </p>
+        <section className="intro-card" aria-labelledby="workflow-title">
+          <h2 id="workflow-title">De la grabación a los requisitos</h2>
+          <ol className="workflow-list">
+            <li>
+              <UploadCloud size={20} />
+              <div>
+                <strong>Carga y transcribe</strong>
+                <p>Procesa el audio en tu entorno, a tu ritmo.</p>
+              </div>
+            </li>
+            <li>
+              <Pencil size={20} />
+              <div>
+                <strong>Revisa la conversación</strong>
+                <p>Corrige el texto y conserva siempre su original.</p>
+              </div>
+            </li>
+            <li>
+              <FileCheck2 size={20} />
+              <div>
+                <strong>Analiza y valida</strong>
+                <p>
+                  Autoriza el análisis y revisa cada hallazgo con su evidencia.
+                </p>
+              </div>
+            </li>
+          </ol>
           <Button asChild>
             <Link to="/meetings/new">
               Procesar una reunión <ArrowUpRight size={17} />
             </Link>
           </Button>
-          <div className="intro-wave">
-            <Waves size={160} strokeWidth={0.7} />
-          </div>
-          <span className="intro-caption">
-            LOCAL POR DISEÑO. HUMANO POR DECISIÓN.
-          </span>
-        </div>
+        </section>
         <div className="stats-grid">
           {[
-            [
-              FolderKanban,
-              data.project_count,
-              "Proyectos activos",
-              "Contexto que se conserva",
-            ],
-            [
-              Video,
-              data.meeting_count,
-              "Reuniones registradas",
-              "Tu historial de conversaciones",
-            ],
-            [
-              FileCheck2,
-              data.pending_requirements,
-              "Por validar",
-              "Tu criterio cierra el ciclo",
-            ],
-            [
-              Clock3,
-              data.jobs.length,
-              "Trabajos pendientes",
-              "Procesamiento secuencial",
-            ],
-          ].map(([Icon, count, title, caption]) => {
-            const I = Icon as typeof Video;
-            return (
-              <div className="stat-card" key={String(title)}>
-                <I size={20} />
-                <strong>{String(count)}</strong>
-                <span>{String(title)}</span>
-                <small>{String(caption)}</small>
-              </div>
-            );
-          })}
+            {
+              Icon: FolderKanban,
+              count: data.project_count,
+              title: "Proyectos activos",
+              caption: "Contexto que se conserva",
+            },
+            {
+              Icon: Video,
+              count: data.meeting_count,
+              title: "Reuniones registradas",
+              caption: "Tu historial de conversaciones",
+            },
+            {
+              Icon: FileCheck2,
+              count: data.pending_requirements,
+              title: "Por validar",
+              caption: "Tu criterio cierra el ciclo",
+            },
+            {
+              Icon: Clock3,
+              count: data.jobs.length,
+              title: "Trabajos pendientes",
+              caption: "Procesamiento secuencial",
+            },
+          ].map(({ Icon, count, title, caption }) => (
+            <div
+              className="stat-card"
+              role="group"
+              aria-label={title}
+              key={title}
+            >
+              <Icon size={20} />
+              <strong>{count}</strong>
+              <span>{title}</span>
+              <small>{caption}</small>
+            </div>
+          ))}
         </div>
       </section>
       <SectionTitle title="Proyectos recientes" to="/projects" />
@@ -303,7 +313,6 @@ export function Projects() {
   return (
     <>
       <PageHeader
-        eyebrow="ORGANIZACIÓN"
         title="Proyectos"
         description="El contexto de cada producto, reunido en un solo lugar."
         actions={<ProjectEditor />}
@@ -406,7 +415,6 @@ export function Meetings() {
   return (
     <>
       <PageHeader
-        eyebrow="CONVERSACIONES"
         title="Reuniones"
         description="Del archivo original a decisiones que puedes rastrear."
         actions={
@@ -466,7 +474,6 @@ export function ProjectDetail() {
   return (
     <>
       <PageHeader
-        eyebrow="PROYECTOS / DETALLE"
         title={project.name}
         description={project.description}
         actions={
@@ -597,7 +604,6 @@ export function NewMeeting() {
   return (
     <>
       <PageHeader
-        eyebrow="CAPTURA"
         title="Una nueva reunión"
         description="Selecciona la grabación y su contexto. El procesamiento comenzará solo cuando lo indiques."
       />

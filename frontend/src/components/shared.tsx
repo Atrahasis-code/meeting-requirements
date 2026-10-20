@@ -4,8 +4,9 @@ import {
   AlertCircle,
   ArrowUpRight,
   Check,
-  LoaderCircle,
+  FolderOpen,
   Trash2,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
@@ -33,7 +34,7 @@ export function Notifications({ children }: { children: ReactNode }) {
           {toast.error ? <AlertCircle size={18} /> : <Check size={18} />}
           <span>{toast.message}</span>
           <button aria-label="Cerrar aviso" onClick={() => setToast(null)}>
-            ×
+            <X size={18} />
           </button>
         </div>
       )}
@@ -72,12 +73,10 @@ export function Badge({ value }: { value: string }) {
   return <span className={"badge badge-" + value}>{label(value)}</span>;
 }
 export function PageHeader({
-  eyebrow,
   title,
   description,
   actions,
 }: {
-  eyebrow: string;
   title: string;
   description?: string;
   actions?: ReactNode;
@@ -85,7 +84,6 @@ export function PageHeader({
   return (
     <header className="page-heading">
       <div>
-        <div className="eyebrow">{eyebrow}</div>
         <h1>{title}</h1>
         {description && <p>{description}</p>}
       </div>
@@ -100,8 +98,13 @@ export function Loading({ error }: { error?: Error | null }) {
       {error.message}
     </div>
   ) : (
-    <div className="loading">
-      <LoaderCircle className="spin" /> Cargando…
+    <div className="loading" role="status" aria-live="polite">
+      <span>Cargando el espacio de trabajo…</span>
+      <div className="loading-skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
     </div>
   );
 }
@@ -116,7 +119,9 @@ export function Empty({
 }) {
   return (
     <div className="empty">
-      <div className="empty-mark">↗</div>
+      <div className="empty-mark" aria-hidden="true">
+        <FolderOpen size={24} />
+      </div>
       <h3>{title}</h3>
       <p>{description}</p>
       {action}
