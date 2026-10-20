@@ -10,7 +10,7 @@ A self-hosted workspace for recording review, local transcription, AI-assisted a
 
 ![The workspace overview, showing synthetic demonstration data](docs/assets/workspace.png)
 
-> **Alpha software.** The interface is currently in Spanish; project documentation is in English. This edition is designed for a single owner on a local machine. It is not a public, multi-user service.
+> **Alpha software.** The interface supports English and Spanish; Spanish is the default. Project documentation is in English. This edition is designed for a single owner on a local machine. It is not a public, multi-user service.
 
 ## Quick start
 
@@ -24,6 +24,8 @@ docker compose ps
 ```
 
 Open **[http://127.0.0.1:8080](http://127.0.0.1:8080)**. Use this exact host for ChatGPT authentication as well.
+
+Use the language selector in the top bar (inside the navigation menu on mobile) to switch between **English** and **Español**. The choice is saved in your browser and does not change transcription language, meeting text, generated results, or exports.
 
 The first build downloads images and dependencies. Transcription models download only when requested. The default configuration works without an `.env` file; copy [`.env.example`](.env.example) to `.env` to change the port or resource limits.
 
@@ -141,7 +143,7 @@ Real transcription checks are separate and opt-in; they may download a model. Se
 
 ## Documentation
 
-All guides below are available in English. Spanish labels are retained where they identify controls in the current interface.
+All guides below are available in English. Some guides retain Spanish labels alongside English names to identify the same controls in either language.
 
 | Guide | Contents |
 | --- | --- |

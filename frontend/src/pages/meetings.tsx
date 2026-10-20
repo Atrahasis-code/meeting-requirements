@@ -1,3 +1,4 @@
+import { t, useI18n, translateMessage, countLabel, number } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import {
   Link,
@@ -50,6 +51,7 @@ import { RequirementTable } from "./requirements";
 const active = (job: Job) =>
   ["running", "queued", "blocked"].includes(job.status);
 function JobCard({ job }: { job: Job }) {
+  useI18n();
   const action = useAction();
   return (
     <section className="job-card">
@@ -64,12 +66,12 @@ function JobCard({ job }: { job: Job }) {
         <div>
           <h3>
             {job.kind === "transcribe"
-              ? "Transcripción local"
-              : "Análisis de requisitos"}
+              ? t("Transcripción local")
+              : t("Análisis de requisitos")}
           </h3>
           <p>
             {label(job.stage)}{" "}
-            {job.cancel_requested ? "· Cancelación solicitada" : ""}
+            {job.cancel_requested ? t("· Cancelación solicitada") : ""}
           </p>
         </div>
         <Badge value={job.status} />
@@ -78,7 +80,8 @@ function JobCard({ job }: { job: Job }) {
         <>
           <progress max={1} value={job.progress} />
           <small>
-            {Math.round(job.progress * 100)}% de audio o bloques completados
+            {number(Math.round(job.progress * 100))}
+            {t("% de audio o bloques completados")}
           </small>
         </>
       )}
@@ -87,7 +90,9 @@ function JobCard({ job }: { job: Job }) {
           <span />
         </div>
       )}
-      {job.error && <div className="error-box">{job.error}</div>}
+      {job.error && (
+        <div className="error-box">{translateMessage(job.error)}</div>
+      )}
       {active(job) && (
         <div className="job-card-actions">
           <Button
@@ -97,12 +102,12 @@ function JobCard({ job }: { job: Job }) {
             onClick={() =>
               void action.run(
                 () => post("/jobs/" + job.id + "/cancel"),
-                "Cancelación solicitada",
+                t("Cancelación solicitada"),
               )
             }
           >
             <Square size={13} />
-            Cancelar trabajo
+            {t("Cancelar trabajo")}
           </Button>
         </div>
       )}
@@ -111,6 +116,7 @@ function JobCard({ job }: { job: Job }) {
 }
 
 export function AnalysisButton({ meeting }: { meeting: Meeting }) {
+  useI18n();
   const [open, setOpen] = useState(false);
   const input = useData<AnalysisInput>(
     "/meetings/" + meeting.id + "/analysis-input",
@@ -134,13 +140,15 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
         }}
       >
         <Sparkles size={17} />
-        {blocked ? "Revisar y reanudar análisis" : "Analizar requisitos"}
+        {blocked ? t("Revisar y reanudar análisis") : t("Analizar requisitos")}
       </Button>
       <Dialog
         open={open}
         onOpenChange={setOpen}
-        title="Revisa exactamente qué se analizará"
-        description="Esta autorización aplica solo a la entrada que ves a continuación."
+        title={t("Revisa exactamente qué se analizará")}
+        description={t(
+          "Esta autorización aplica solo a la entrada que ves a continuación.",
+        )}
       >
         {input.data ? (
           <div className="form-stack">
@@ -148,18 +156,24 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
               <ShieldCheck size={18} />
               <span>
                 {input.data.snapshot.provider === "mock"
-                  ? "Proveedor Mock: simulación local, sin envío externo."
-                  : "Se enviará únicamente este texto y contexto a ChatGPT mediante tu plan. El audio permanece local."}
+                  ? t("Proveedor Mock: simulación local, sin envío externo.")
+                  : t(
+                      "Se enviará únicamente este texto y contexto a ChatGPT mediante tu plan. El audio permanece local.",
+                    )}
               </span>
             </div>
             <div className="inline-meta">
               <Badge value={input.data.snapshot.provider} />
               <span>
-                Modelo: {input.data.snapshot.model ?? "No seleccionado"}
+                {t("Modelo:") + " "}
+                {input.data.snapshot.model ?? t("No seleccionado")}
               </span>
-              <span>Revisión {input.data.snapshot.revision}</span>
+              <span>
+                {t("Revisión") + " "}
+                {input.data.snapshot.revision}
+              </span>
             </div>
-            <TextField label="Contexto y glosario">
+            <TextField label={t("Contexto y glosario")}>
               <textarea
                 rows={3}
                 readOnly
@@ -172,7 +186,7 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
                 }
               />
             </TextField>
-            <TextField label="Transcripción revisada">
+            <TextField label={t("Transcripción revisada")}>
               <textarea
                 rows={9}
                 readOnly
@@ -187,7 +201,9 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
               />
-              Autorizo este análisis con la entrada y el proveedor indicados.
+              {t(
+                "Autorizo este análisis con la entrada y el proveedor indicados.",
+              )}
             </label>
             <Button
               disabled={!consent || action.busy}
@@ -202,11 +218,11 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
                   });
                   setOpen(false);
                   navigate("/meetings/" + meeting.id);
-                }, "Análisis en cola")
+                }, t("Análisis en cola"))
               }
             >
               <Sparkles size={16} />
-              Confirmar análisis
+              {t("Confirmar análisis")}
             </Button>
           </div>
         ) : (
@@ -218,6 +234,7 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
 }
 
 export function MeetingPage() {
+  useI18n();
   const { id } = useParams();
   const query = useData<Meeting>("/meetings/" + id, true);
   const action = useAction();
@@ -236,14 +253,16 @@ export function MeetingPage() {
           " · " +
           label(meeting.profile) +
           " · " +
-          (meeting.language ?? "Idioma automático")
+          (meeting.language ?? t("Idioma automático"))
         }
         actions={
           <>
             <Badge value={meeting.status} />
             <ConfirmDelete
-              title="Eliminar reunión"
-              description="Se eliminarán la grabación, transcripción, análisis, requisitos y exportaciones de esta reunión."
+              title={t("Eliminar reunión")}
+              description={t(
+                "Se eliminarán la grabación, transcripción, análisis, requisitos y exportaciones de esta reunión.",
+              )}
               onConfirm={async () => {
                 await remove("/meetings/" + id + "?confirm=true");
                 navigate("/meetings");
@@ -254,25 +273,29 @@ export function MeetingPage() {
       />
       <div className="pipeline">
         <div className="done">
-          <span>1</span>Grabación
+          <span>1</span>
+          {t("Grabación")}
         </div>
         <i />
         <div className={meeting.transcript_revision ? "done" : ""}>
-          <span>2</span>Transcripción
+          <span>2</span>
+          {t("Transcripción")}
         </div>
         <i />
         <div className={meeting.active_analysis_id ? "done" : ""}>
-          <span>3</span>Análisis
+          <span>3</span>
+          {t("Análisis")}
         </div>
         <i />
         <div>
-          <span>4</span>Validación humana
+          <span>4</span>
+          {t("Validación humana")}
         </div>
       </div>
       <div className="two-columns">
         <section className="panel padded">
           <div className="section-heading">
-            <h2>Grabación original</h2>
+            <h2>{t("Grabación original")}</h2>
             <Video size={19} />
           </div>
           {meeting.media ? (
@@ -288,16 +311,19 @@ export function MeetingPage() {
                   </small>
                 </div>
                 <ConfirmDelete
-                  title="Eliminar solo la grabación"
-                  description="La grabación se eliminará. Las transcripciones, análisis y evidencia textual se conservarán; ya no podrás reproducir el audio."
+                  title={t("Eliminar solo la grabación")}
+                  description={t(
+                    "La grabación se eliminará. Las transcripciones, análisis y evidencia textual se conservarán; ya no podrás reproducir el audio.",
+                  )}
                   onConfirm={() =>
                     remove("/meetings/" + id + "/media?confirm=true")
                   }
                 />
               </div>
               <p className="muted">
-                Tu grabación se conserva en un volumen local. No se envía a
-                ChatGPT.
+                {t(
+                  "Tu grabación se conserva en un volumen local. No se envía a ChatGPT.",
+                )}
               </p>
               {!meeting.transcript_revision && (
                 <Button
@@ -305,15 +331,15 @@ export function MeetingPage() {
                   onClick={() =>
                     void action.run(
                       () => post("/meetings/" + id + "/transcribe"),
-                      "Transcripción en cola",
+                      t("Transcripción en cola"),
                     )
                   }
                 >
                   <Play size={16} />
                   {latest &&
                   ["failed", "interrupted", "cancelled"].includes(latest.status)
-                    ? "Reintentar transcripción"
-                    : "Iniciar transcripción"}
+                    ? t("Reintentar transcripción")
+                    : t("Iniciar transcripción")}
                 </Button>
               )}
             </>
@@ -321,13 +347,15 @@ export function MeetingPage() {
             <div className="form-stack">
               <p>
                 {meeting.transcript_revision
-                  ? "La grabación fue eliminada. Su evidencia textual sigue disponible."
-                  : "Carga la grabación para continuar."}
+                  ? t(
+                      "La grabación fue eliminada. Su evidencia textual sigue disponible.",
+                    )
+                  : t("Carga la grabación para continuar.")}
               </p>
               {!meeting.transcript_revision && (
                 <>
                   <input
-                    aria-label="Adjuntar grabación"
+                    aria-label={t("Adjuntar grabación")}
                     type="file"
                     accept=".mp4,.m4a,.mp3,.wav"
                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
@@ -342,11 +370,11 @@ export function MeetingPage() {
                           method: "POST",
                           body,
                         });
-                      }, "Grabación cargada")
+                      }, t("Grabación cargada"))
                     }
                   >
                     <Upload size={16} />
-                    Cargar archivo
+                    {t("Cargar archivo")}
                   </Button>
                 </>
               )}
@@ -354,16 +382,17 @@ export function MeetingPage() {
           )}
         </section>
         <section className="panel padded">
-          <h2>Continúa donde lo dejaste</h2>
+          <h2>{t("Continúa donde lo dejaste")}</h2>
           <p>
-            Revisa la transcripción antes de solicitar el análisis. Las
-            decisiones finales siempre son tuyas.
+            {t(
+              "Revisa la transcripción antes de solicitar el análisis. Las decisiones finales siempre son tuyas.",
+            )}
           </p>
           <div className="form-stack">
             <Button variant="outline" asChild>
               <Link to={"/meetings/" + id + "/transcript"}>
                 <FileText size={17} />
-                Abrir transcripción
+                {t("Abrir transcripción")}
                 <ArrowRight size={16} />
               </Link>
             </Button>
@@ -373,7 +402,7 @@ export function MeetingPage() {
             <Button variant="outline" asChild>
               <Link to={"/meetings/" + id + "/results"}>
                 <Sparkles size={17} />
-                Resultados y exportaciones
+                {t("Resultados y exportaciones")}
                 <ArrowRight size={16} />
               </Link>
             </Button>
@@ -382,7 +411,7 @@ export function MeetingPage() {
       </div>
       {meeting.jobs.length > 0 && (
         <>
-          <h2 className="section-spaced">Historial de procesamiento</h2>
+          <h2 className="section-spaced">{t("Historial de procesamiento")}</h2>
           <div className="job-list">
             {meeting.jobs.map((job) => (
               <JobCard key={job.id} job={job} />
@@ -396,6 +425,7 @@ export function MeetingPage() {
 
 type Draft = { revised_text: string; reviewed: boolean; doubtful: boolean };
 export function TranscriptPage() {
+  useI18n();
   const { id } = useParams();
   const [params] = useSearchParams();
   const query = useData<Transcript>("/meetings/" + id + "/transcript", true);
@@ -419,7 +449,9 @@ export function TranscriptPage() {
         dirty &&
         anchor &&
         anchor.pathname !== location.pathname &&
-        !window.confirm("Hay correcciones sin guardar. ¿Salir y descartarlas?")
+        !window.confirm(
+          t("Hay correcciones sin guardar. ¿Salir y descartarlas?"),
+        )
       ) {
         e.preventDefault();
         e.stopPropagation();
@@ -486,22 +518,26 @@ export function TranscriptPage() {
     <>
       <PageHeader
         title={meeting.data.title}
-        description="Escucha, comprueba y corrige. El texto original permanece conservado."
+        description={t(
+          "Escucha, comprueba y corrige. El texto original permanece conservado.",
+        )}
         actions={
           <>
             <Button variant="outline" asChild>
               <Link to={"/meetings/" + id}>
                 <ArrowLeft size={16} />
-                Reunión
+                {t("Reunión")}
               </Link>
             </Button>
             <Button
               disabled={!dirty || action.busy}
-              onClick={() => void action.run(save, "Correcciones guardadas")}
+              onClick={() => void action.run(save, t("Correcciones guardadas"))}
             >
               {dirty
-                ? `Guardar ${Object.keys(drafts).length} cambios`
-                : "Cambios guardados"}
+                ? t("Guardar") +
+                  " " +
+                  countLabel("changes", Object.keys(drafts).length)
+                : t("Cambios guardados")}
               <Check size={16} />
             </Button>
           </>
@@ -509,7 +545,7 @@ export function TranscriptPage() {
       />
       <div className="transcript-layout">
         <aside className="player-panel panel padded">
-          <h2>Escucha el contexto</h2>
+          <h2>{t("Escucha el contexto")}</h2>
           {meeting.data.media ? (
             <video
               ref={video}
@@ -519,14 +555,18 @@ export function TranscriptPage() {
               onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
             />
           ) : (
-            <div className="notice">La grabación no está disponible.</div>
+            <div className="notice">
+              {t("La grabación no está disponible.")}
+            </div>
           )}
           <div className="player-time">
             {time(current)}{" "}
             <span>/ {time(meeting.data.media?.duration ?? 0)}</span>
           </div>
           <p>
-            Selecciona una marca de tiempo para ir al audio de ese segmento.
+            {t(
+              "Selecciona una marca de tiempo para ir al audio de ese segmento.",
+            )}
           </p>
           <div className="download-formats">
             {["txt", "json", "srt", "vtt"].map((format) => (
@@ -550,13 +590,16 @@ export function TranscriptPage() {
           ) : (
             <p className="notice">
               {dirty
-                ? "Guarda los cambios antes de analizar."
-                : "El análisis se habilitará cuando termine la transcripción."}
+                ? t("Guarda los cambios antes de analizar.")
+                : t(
+                    "El análisis se habilitará cuando termine la transcripción.",
+                  )}
             </p>
           )}
           <small>
-            Revisión {transcript.revision} · {transcript.segments.length}{" "}
-            segmentos
+            {t("Revisión") + " "}
+            {transcript.revision} ·{" "}
+            {countLabel("segments", transcript.segments.length)}
           </small>
         </aside>
         <section>
@@ -564,25 +607,31 @@ export function TranscriptPage() {
             <div className="search-field">
               <Search size={16} />
               <input
-                aria-label="Buscar en transcripción"
-                placeholder="Buscar en la transcripción…"
+                aria-label={t("Buscar en transcripción")}
+                placeholder={t("Buscar en la transcripción…")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            {dirty && <span className="unsaved">Cambios sin guardar</span>}
+            {dirty && (
+              <span className="unsaved">{t("Cambios sin guardar")}</span>
+            )}
           </div>
           {!transcript.segments.length ? (
             <Empty
               title={
                 transcript.complete
-                  ? "No se detectó voz"
-                  : "La transcripción aparecerá aquí"
+                  ? t("No se detectó voz")
+                  : t("La transcripción aparecerá aquí")
               }
               description={
                 transcript.complete
-                  ? "La grabación no produjo segmentos de voz. Comprueba el audio original."
-                  : "Inicia o espera la transcripción local desde la reunión."
+                  ? t(
+                      "La grabación no produjo segmentos de voz. Comprueba el audio original.",
+                    )
+                  : t(
+                      "Inicia o espera la transcripción local desde la reunión.",
+                    )
               }
             />
           ) : (
@@ -625,7 +674,7 @@ export function TranscriptPage() {
                               update(segment, { reviewed: e.target.checked })
                             }
                           />
-                          Revisado
+                          {t("Revisado")}
                         </label>
                         <label>
                           <input
@@ -636,12 +685,14 @@ export function TranscriptPage() {
                               update(segment, { doubtful: e.target.checked })
                             }
                           />
-                          Por comprobar
+                          {t("Por comprobar")}
                         </label>
                       </div>
                     </div>
                     <textarea
-                      aria-label={"Texto del segmento " + time(segment.start)}
+                      aria-label={
+                        t("Texto del segmento") + " " + time(segment.start)
+                      }
                       disabled={!transcript.complete}
                       value={value.revised_text}
                       rows={Math.min(
@@ -657,7 +708,7 @@ export function TranscriptPage() {
                     />
                     {value.revised_text !== segment.original_text && (
                       <details>
-                        <summary>Ver texto original</summary>
+                        <summary>{t("Ver texto original")}</summary>
                         <p>{segment.original_text}</p>
                       </details>
                     )}
@@ -684,6 +735,7 @@ const resultTabs = [
   ["backlog", "Backlog"],
 ];
 export function ResultsPage() {
+  useI18n();
   const { id } = useParams();
   const meeting = useData<Meeting>("/meetings/" + id, true);
   const query = useData<Analysis[]>("/meetings/" + id + "/analyses", true);
@@ -702,13 +754,15 @@ export function ResultsPage() {
     <>
       <PageHeader
         title={meeting.data.title}
-        description="Hallazgos con evidencia. Revisión y aprobación bajo tu control."
+        description={t(
+          "Hallazgos con evidencia. Revisión y aprobación bajo tu control.",
+        )}
         actions={
           <>
             <Button asChild variant="outline">
               <Link to={"/meetings/" + id + "/transcript"}>
                 <FileText size={16} />
-                Transcripción
+                {t("Transcripción")}
               </Link>
             </Button>
             {run && (
@@ -717,12 +771,12 @@ export function ResultsPage() {
                 onClick={() =>
                   void action.run(
                     () => post("/meetings/" + id + "/export"),
-                    "Paquete Markdown generado",
+                    t("Paquete Markdown generado"),
                   )
                 }
               >
                 <Download size={16} />
-                Generar exportación
+                {t("Generar exportación")}
               </Button>
             )}
           </>
@@ -730,12 +784,14 @@ export function ResultsPage() {
       />
       {!run ? (
         <Empty
-          title="Una buena especificación empieza por escuchar"
-          description="Revisa la transcripción e inicia un análisis para obtener resultados estructurados."
+          title={t("Una buena especificación empieza por escuchar")}
+          description={t(
+            "Revisa la transcripción e inicia un análisis para obtener resultados estructurados.",
+          )}
           action={
             <Button asChild>
               <Link to={"/meetings/" + id + "/transcript"}>
-                Revisar transcripción
+                {t("Revisar transcripción")}
                 <ArrowRight size={16} />
               </Link>
             </Button>
@@ -744,7 +800,7 @@ export function ResultsPage() {
       ) : (
         <>
           <div className="version-bar">
-            <TextField label="Versión de análisis">
+            <TextField label={t("Versión de análisis")}>
               <select
                 value={run.id}
                 onChange={(e) => setSelected(e.target.value)}
@@ -752,13 +808,16 @@ export function ResultsPage() {
                 {runs.map((r, i) => (
                   <option key={r.id} value={r.id}>
                     {date(r.created_at)} · {r.id.slice(0, 8)} · {r.provider}
-                    {r.active ? " · ACTIVA" : ""} · versión {runs.length - i}
+                    {r.active ? " " + t("· ACTIVA") : ""}
+                    {" " + t("· versión") + " "}
+                    {runs.length - i}
                   </option>
                 ))}
               </select>
             </TextField>
             <span className="muted">
-              Transcripción · revisión {run.input_snapshot.revision}
+              {t("Transcripción · revisión") + " "}
+              {run.input_snapshot.revision}
             </span>
             {!run.active && (
               <Button
@@ -767,18 +826,19 @@ export function ResultsPage() {
                 onClick={() =>
                   void action.run(
                     () => post("/analysis-runs/" + run.id + "/activate"),
-                    "Versión activada",
+                    t("Versión activada"),
                   )
                 }
               >
-                Usar esta versión
+                {t("Usar esta versión")}
               </Button>
             )}
           </div>
           {run.provider === "mock" && (
             <div className="notice">
-              SIMULACIÓN · Estos resultados permiten probar el flujo. No
-              representan un análisis real de IA.
+              {t(
+                "SIMULACIÓN · Estos resultados permiten probar el flujo. No representan un análisis real de IA.",
+              )}
             </div>
           )}
           <div className="tabs result-tabs">
@@ -788,7 +848,7 @@ export function ResultsPage() {
                 className={tab === key ? "active" : ""}
                 onClick={() => setTab(key)}
               >
-                {title}
+                {translateMessage(title)}
                 {key === "requirements" && (
                   <span className="tab-count">{run.requirements.length}</span>
                 )}
@@ -797,10 +857,11 @@ export function ResultsPage() {
           </div>
           <ResultContent run={run} tab={tab} />
           <section className="section-spaced">
-            <h2>Exportaciones conservadas</h2>
+            <h2>{t("Exportaciones conservadas")}</h2>
             <p className="muted">
-              Cada paquete es una copia independiente de los datos revisados al
-              momento de exportar.
+              {t(
+                "Cada paquete es una copia independiente de los datos revisados al momento de exportar.",
+              )}
             </p>
             {exports.data?.length ? (
               <div className="panel">
@@ -815,7 +876,7 @@ export function ResultsPage() {
                         href={"/api/exports/" + artifact.id + "/download"}
                       >
                         <Download size={15} />
-                        Descargar ZIP
+                        {t("Descargar ZIP")}
                       </a>
                     </summary>
                     <div className="artifact-files">
@@ -838,7 +899,7 @@ export function ResultsPage() {
                 ))}
               </div>
             ) : (
-              <p className="muted">Todavía no hay exportaciones.</p>
+              <p className="muted">{t("Todavía no hay exportaciones.")}</p>
             )}
           </section>
         </>
@@ -849,13 +910,14 @@ export function ResultsPage() {
 
 function criterionStatus(status: string) {
   return status === "validated"
-    ? "Validado"
+    ? t("Validado")
     : status === "rejected"
-      ? "Rechazado"
-      : "Pendiente de tu validación";
+      ? t("Rechazado")
+      : t("Pendiente de tu validación");
 }
 
 function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
+  useI18n();
   const result = run.original_result;
   const criteria: NonNullable<Analysis["criteria"]> =
     run.criteria ??
@@ -890,10 +952,12 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
                   ))}
                 </ul>
               ) : (
-                <p className="muted">Sin evidencia suficiente.</p>
+                <p className="muted">{t("Sin evidencia suficiente.")}</p>
               )
             ) : (
-              <p className="preserve">{value || "Sin evidencia suficiente."}</p>
+              <p className="preserve">
+                {value || t("Sin evidencia suficiente.")}
+              </p>
             )}
           </section>
         ))}
@@ -907,7 +971,8 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
             <span className="code">{story.code}</span>
             <h3>{story.text}</h3>
             <p className="muted">
-              Requisitos de origen: {references(story.requirements)}
+              {t("Requisitos de origen:") + " "}
+              {references(story.requirements)}
             </p>
           </section>
         ))}
@@ -932,58 +997,64 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
               references={references(c.requirements)}
             />
             <dl className="criterion">
-              <dt>Given</dt>
+              <dt>{t("Dado")}</dt>
               <dd>{c.given}</dd>
-              <dt>When</dt>
+              <dt>{t("Cuando")}</dt>
               <dd>{c.when}</dd>
-              <dt>Then</dt>
+              <dt>{t("Entonces")}</dt>
               <dd>{c.then}</dd>
             </dl>
             <p className="muted">
-              Requisitos de origen: {references(c.requirements)}
+              {t("Requisitos de origen:") + " "}
+              {references(c.requirements)}
             </p>
             {c.revisions.length > 0 && (
               <>
                 <details>
-                  <summary>Texto original generado</summary>
+                  <summary>{t("Texto original generado")}</summary>
                   <dl className="criterion">
-                    <dt>Given</dt>
+                    <dt>{t("Dado")}</dt>
                     <dd>{c.original.given}</dd>
-                    <dt>When</dt>
+                    <dt>{t("Cuando")}</dt>
                     <dd>{c.original.when}</dd>
-                    <dt>Then</dt>
+                    <dt>{t("Entonces")}</dt>
                     <dd>{c.original.then}</dd>
                   </dl>
                 </details>
                 <details>
-                  <summary>Historial de revisiones ({c.revision})</summary>
+                  <summary>
+                    {t("Historial de revisiones (")}
+                    {c.revision})
+                  </summary>
                   {c.revisions.map((revision, index) => (
                     <section key={index}>
                       <p>
-                        Revisión {index + 1} · {revision.created_at}
+                        {t("Revisión") + " "}
+                        {index + 1} · {revision.created_at}
                       </p>
                       <p>{revision.observations}</p>
                       <p>
                         {revision.actor?.label ??
-                          "Registro anterior sin identidad verificada"}
+                          t("Registro anterior sin identidad verificada")}
                       </p>
                       <p>
-                        Estado anterior:{" "}
-                        {criterionStatus(revision.before.status)} · Estado
-                        posterior: {criterionStatus(revision.after.status)}
+                        {t("Estado anterior:")}{" "}
+                        {criterionStatus(revision.before.status)}
+                        {" " + t("· Estado posterior:") + " "}
+                        {criterionStatus(revision.after.status)}
                       </p>
                       <dl className="criterion">
-                        <dt>Given anterior</dt>
+                        <dt>{t("Dado anterior")}</dt>
                         <dd>{revision.before.given}</dd>
-                        <dt>When anterior</dt>
+                        <dt>{t("Cuando anterior")}</dt>
                         <dd>{revision.before.when}</dd>
-                        <dt>Then anterior</dt>
+                        <dt>{t("Entonces anterior")}</dt>
                         <dd>{revision.before.then}</dd>
-                        <dt>Given revisado</dt>
+                        <dt>{t("Dado revisado")}</dt>
                         <dd>{revision.after.given}</dd>
-                        <dt>When revisado</dt>
+                        <dt>{t("Cuando revisado")}</dt>
                         <dd>{revision.after.when}</dd>
-                        <dt>Then revisado</dt>
+                        <dt>{t("Entonces revisado")}</dt>
                         <dd>{revision.after.then}</dd>
                       </dl>
                     </section>
@@ -1002,11 +1073,11 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
           <thead>
             <tr>
               <th>ID</th>
-              <th>MÓDULO</th>
-              <th>HISTORIA</th>
-              <th>REQUISITOS</th>
-              <th>PRIORIDAD</th>
-              <th>DEPENDENCIAS</th>
+              <th>{t("MÓDULO")}</th>
+              <th>{t("HISTORIA")}</th>
+              <th>{t("REQUISITOS")}</th>
+              <th>{t("PRIORIDAD")}</th>
+              <th>{t("DEPENDENCIAS")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1019,7 +1090,7 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
                 <td>
                   <Badge value={item.priority} />
                 </td>
-                <td>{item.dependencies.join(", ") || "No indicadas"}</td>
+                <td>{item.dependencies.join(", ") || t("No indicadas")}</td>
               </tr>
             ))}
           </tbody>
@@ -1038,7 +1109,10 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
           {note.evidence.map((e, j) => (
             <blockquote key={j}>
               <p>“{e.quote}”</p>
-              <small>Segmento {e.segment_id}</small>
+              <small>
+                {t("Segmento") + " "}
+                {e.segment_id}
+              </small>
             </blockquote>
           ))}
         </section>
@@ -1046,8 +1120,10 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
     </div>
   ) : (
     <Empty
-      title="La evidencia marca el alcance"
-      description="La reunión no aportó información suficiente para esta sección. No se completan vacíos con suposiciones."
+      title={t("La evidencia marca el alcance")}
+      description={t(
+        "La reunión no aportó información suficiente para esta sección. No se completan vacíos con suposiciones.",
+      )}
     />
   );
 }

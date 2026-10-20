@@ -1,3 +1,4 @@
+import { t, useI18n } from "../../lib/i18n";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -14,6 +15,7 @@ export function Dialog({
   description?: string;
   children: ReactNode;
 }) {
+  useI18n();
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -23,10 +25,13 @@ export function Dialog({
             <div>
               <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
               <DialogPrimitive.Description>
-                {description ?? "Revisa la información antes de continuar."}
+                {description ?? t("Revisa la información antes de continuar.")}
               </DialogPrimitive.Description>
             </div>
-            <DialogPrimitive.Close className="icon-button" aria-label="Cerrar">
+            <DialogPrimitive.Close
+              className="icon-button"
+              aria-label={t("Cerrar")}
+            >
               <X size={18} />
             </DialogPrimitive.Close>
           </div>

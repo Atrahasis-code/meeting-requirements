@@ -1,3 +1,4 @@
+import { t, useI18n } from "./lib/i18n";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes, Link } from "react-router-dom";
@@ -15,6 +16,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
+import { LanguageSelector } from "./components/language-selector";
 import { useData } from "./components/shared";
 import {
   Dashboard,
@@ -28,15 +30,18 @@ import { SettingsPage } from "./pages/settings";
 
 export default function App({
   settingsPage,
-  environmentLabel = "Entorno local",
-  privacyTitle = "Tu audio se queda aquí",
-  privacyDescription = "Transcripción local. Tú decides qué texto compartir.",
+  environmentLabel = t("Entorno local"),
+  privacyTitle = t("Tu audio se queda aquí"),
+  privacyDescription = t(
+    "Transcripción local. Tú decides qué texto compartir.",
+  ),
 }: {
   settingsPage?: ReactNode;
   environmentLabel?: string;
   privacyTitle?: string;
   privacyDescription?: string;
 }) {
+  useI18n();
   const [dark, setDark] = useState(
     () => localStorage.getItem("mra-theme") === "dark",
   );
@@ -63,7 +68,7 @@ export default function App({
     const focusable = () =>
       Array.from(
         sidebar.current?.querySelectorAll<HTMLElement>(
-          "a[href], button:not([disabled])",
+          "a[href], button:not([disabled]), select:not([disabled])",
         ) ?? [],
       ).filter((el) => el.getClientRects().length);
     focusable()[0]?.focus();
@@ -99,12 +104,12 @@ export default function App({
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">
-        Saltar al contenido
+        {t("Saltar al contenido")}
       </a>
       {mobile && menu && (
         <button
           className="nav-backdrop"
-          aria-label="Cerrar navegación"
+          aria-label={t("Cerrar navegación")}
           onClick={() => setMenu(false)}
           tabIndex={-1}
         />
@@ -112,7 +117,7 @@ export default function App({
       <aside
         ref={sidebar}
         id="workspace-navigation"
-        aria-label="Navegación del espacio de trabajo"
+        aria-label={t("Navegación del espacio de trabajo")}
         role={mobile && menu ? "dialog" : undefined}
         aria-modal={mobile && menu ? true : undefined}
         inert={mobile && !menu}
@@ -120,7 +125,7 @@ export default function App({
       >
         <button
           className="icon-button mobile-menu sidebar-close"
-          aria-label="Cerrar navegación"
+          aria-label={t("Cerrar navegación")}
           onClick={() => setMenu(false)}
         >
           <X size={20} />
@@ -133,13 +138,13 @@ export default function App({
             meeting<span className="brand-sub">REQUIREMENTS AI</span>
           </span>
         </Link>
-        <div className="workspace-label">ESPACIO DE TRABAJO</div>
-        <nav aria-label="Navegación principal">
+        <div className="workspace-label">{t("ESPACIO DE TRABAJO")}</div>
+        <nav aria-label={t("Navegación principal")}>
           {[
-            [LayoutDashboard, "/", "Vista general"],
-            [FolderKanban, "/projects", "Proyectos"],
-            [Video, "/meetings", "Reuniones"],
-            [Settings2, "/settings", "Configuración"],
+            [LayoutDashboard, "/", t("Vista general")],
+            [FolderKanban, "/projects", t("Proyectos")],
+            [Video, "/meetings", t("Reuniones")],
+            [Settings2, "/settings", t("Configuración")],
           ].map(([Icon, to, name]) => {
             const I = Icon as typeof AudioLines;
             return (
@@ -155,6 +160,7 @@ export default function App({
             );
           })}
         </nav>
+        <LanguageSelector className="sidebar-language" />
         <div className="sidebar-bottom">
           <div className="privacy-note">
             <ShieldCheck size={19} />
@@ -168,12 +174,12 @@ export default function App({
               }
             />
             {health.isPending
-              ? "Comprobando worker…"
+              ? t("Comprobando worker…")
               : health.error
-                ? "Estado no disponible"
+                ? t("Estado no disponible")
                 : health.data?.worker_online
-                  ? "Worker disponible"
-                  : "Worker sin conexión"}
+                  ? t("Worker disponible")
+                  : t("Worker sin conexión")}
           </div>
         </div>
       </aside>
@@ -181,7 +187,7 @@ export default function App({
         <div className="topbar">
           <button
             className="icon-button mobile-menu"
-            aria-label="Abrir navegación"
+            aria-label={t("Abrir navegación")}
             aria-expanded={menu}
             aria-controls="workspace-navigation"
             onClick={() => setMenu(!menu)}
@@ -189,15 +195,18 @@ export default function App({
             {menu ? <X size={20} /> : <Menu size={20} />}
           </button>
           <span className="topbar-label">
-            De la conversación a la especificación.
+            {t("De la conversación a la especificación.")}
           </span>
           <div className="topbar-actions">
+            <LanguageSelector className="desktop-language" />
             <span className="local-tag">
               <span /> {environmentLabel}
             </span>
             <button
               className="icon-button"
-              aria-label={dark ? "Activar tema claro" : "Activar tema oscuro"}
+              aria-label={
+                dark ? t("Activar tema claro") : t("Activar tema oscuro")
+              }
               onClick={() => setDark(!dark)}
             >
               {dark ? <Sun size={19} /> : <Moon size={19} />}
@@ -205,7 +214,7 @@ export default function App({
             <Button asChild size="sm">
               <Link to="/meetings/new">
                 <Plus size={16} />
-                Nueva reunión
+                {t("Nueva reunión")}
               </Link>
             </Button>
           </div>
@@ -231,8 +240,8 @@ export default function App({
               path="*"
               element={
                 <div className="empty">
-                  <h1>Página no encontrada</h1>
-                  <Link to="/">Volver al inicio</Link>
+                  <h1>{t("Página no encontrada")}</h1>
+                  <Link to="/">{t("Volver al inicio")}</Link>
                 </div>
               }
             />
@@ -241,8 +250,9 @@ export default function App({
         <footer>
           Meeting Requirements AI{" "}
           <span>
-            Grabaciones corporativas: utiliza únicamente archivos cuyo
-            procesamiento esté autorizado.
+            {t(
+              "Grabaciones corporativas: utiliza únicamente archivos cuyo procesamiento esté autorizado.",
+            )}
           </span>
         </footer>
       </div>

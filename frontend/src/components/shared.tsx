@@ -1,4 +1,13 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { t, useI18n, translateMessage } from "../lib/i18n";
+import {
+  createContext,
+  useContext,
+  useState,
+  useId,
+  isValidElement,
+  cloneElement,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -17,6 +26,7 @@ const ToastContext = createContext<(message: string, error?: boolean) => void>(
   () => {},
 );
 export function Notifications({ children }: { children: ReactNode }) {
+  useI18n();
   const [toast, setToast] = useState<{
     message: string;
     error: boolean;
@@ -32,8 +42,8 @@ export function Notifications({ children }: { children: ReactNode }) {
           role={toast.error ? "alert" : "status"}
         >
           {toast.error ? <AlertCircle size={18} /> : <Check size={18} />}
-          <span>{toast.message}</span>
-          <button aria-label="Cerrar aviso" onClick={() => setToast(null)}>
+          <span>{translateMessage(toast.message)}</span>
+          <button aria-label={t("Cerrar aviso")} onClick={() => setToast(null)}>
             <X size={18} />
           </button>
         </div>
@@ -42,6 +52,7 @@ export function Notifications({ children }: { children: ReactNode }) {
   );
 }
 export function useAction() {
+  useI18n();
   const notify = useContext(ToastContext);
   const cache = useQueryClient();
   const mutation = useMutation({
@@ -70,6 +81,7 @@ export function useData<T>(path: string, poll = false, enabled = true) {
   });
 }
 export function Badge({ value }: { value: string }) {
+  useI18n();
   return <span className={"badge badge-" + value}>{label(value)}</span>;
 }
 export function PageHeader({
@@ -81,6 +93,7 @@ export function PageHeader({
   description?: string;
   actions?: ReactNode;
 }) {
+  useI18n();
   return (
     <header className="page-heading">
       <div>
@@ -92,14 +105,15 @@ export function PageHeader({
   );
 }
 export function Loading({ error }: { error?: Error | null }) {
+  useI18n();
   return error ? (
     <div className="error-box" role="alert">
       <AlertCircle />
-      {error.message}
+      {translateMessage(error.message)}
     </div>
   ) : (
     <div className="loading" role="status" aria-live="polite">
-      <span>Cargando el espacio de trabajo…</span>
+      <span>{t("Cargando el espacio de trabajo…")}</span>
       <div className="loading-skeleton" aria-hidden="true">
         <span />
         <span />
@@ -117,6 +131,7 @@ export function Empty({
   description: string;
   action?: ReactNode;
 }) {
+  useI18n();
   return (
     <div className="empty">
       <div className="empty-mark" aria-hidden="true">
@@ -137,6 +152,7 @@ export function ConfirmDelete({
   description: string;
   onConfirm: () => Promise<unknown>;
 }) {
+  useI18n();
   const [open, setOpen] = useState(false);
   const action = useAction();
   return (
@@ -157,18 +173,18 @@ export function ConfirmDelete({
       >
         <div className="dialog-actions">
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Conservar datos
+            {t("Conservar datos")}
           </Button>
           <Button
             variant="destructive"
             disabled={action.busy}
             onClick={() =>
               void action
-                .run(onConfirm, "Eliminación completada")
+                .run(onConfirm, t("Eliminación completada"))
                 .then(() => setOpen(false))
             }
           >
-            Confirmar eliminación
+            {t("Confirmar eliminación")}
           </Button>
         </div>
       </Dialog>
@@ -184,23 +200,48 @@ export function TextField({
   children: ReactNode;
   error?: string;
 }) {
+  useI18n();
+  const generatedId = useId();
+  const child = isValidElement<{
+    id?: string;
+    "aria-describedby"?: string;
+    "aria-invalid"?: boolean;
+  }>(children)
+    ? children
+    : null;
+  const id = child?.props.id ?? generatedId;
+  const errorId = id + "-error";
   return (
-    <label className="field">
-      <span>{caption}</span>
-      {children}
-      {error && <small className="field-error">{error}</small>}
-    </label>
+    <div className="field">
+      <label htmlFor={id}>{caption}</label>
+      {child
+        ? cloneElement(child, {
+            id,
+            "aria-invalid": !!error || child.props["aria-invalid"],
+            "aria-describedby":
+              [child.props["aria-describedby"], error ? errorId : undefined]
+                .filter(Boolean)
+                .join(" ") || undefined,
+          })
+        : children}
+      {error && (
+        <small id={errorId} className="field-error">
+          {translateMessage(error)}
+        </small>
+      )}
+    </div>
   );
 }
 export function SectionTitle({
   title,
   to,
-  label: linkLabel = "Ver todos",
+  label: linkLabel = t("Ver todos"),
 }: {
   title: string;
   to?: string;
   label?: string;
 }) {
+  useI18n();
   return (
     <div className="section-heading">
       <h2>{title}</h2>

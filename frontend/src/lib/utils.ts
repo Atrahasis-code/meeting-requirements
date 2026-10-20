@@ -1,3 +1,4 @@
+import { getLanguage, translateMessage, number } from "./i18n";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
@@ -7,7 +8,7 @@ export function time(seconds: number) {
   return new Date(seconds * 1000).toISOString().slice(11, 19);
 }
 export function date(value: string) {
-  return new Intl.DateTimeFormat("es", {
+  return new Intl.DateTimeFormat(getLanguage(), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -15,10 +16,11 @@ export function date(value: string) {
 }
 export function bytes(value: number) {
   return value > 1024 ** 3
-    ? `${(value / 1024 ** 3).toFixed(1)} GB`
-    : `${(value / 1024 ** 2).toFixed(1)} MB`;
+    ? `${number(value / 1024 ** 3, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} GB`
+    : `${number(value / 1024 ** 2, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
 }
 export const labels: Record<string, string> = {
+  pending_validation: "Pendiente de tu validación",
   registered: "Sin grabación",
   uploaded: "Cargada",
   queued: "En cola",
@@ -60,4 +62,5 @@ export const labels: Record<string, string> = {
   risks: "Riesgos",
   next_steps: "Próximos pasos",
 };
-export const label = (value: string) => labels[value] ?? value;
+export const label = (value: string) =>
+  translateMessage(labels[value] ?? value);

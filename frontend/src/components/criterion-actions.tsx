@@ -1,3 +1,4 @@
+import { t, useI18n, translateMessage } from "../lib/i18n";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, patch, post } from "../lib/api";
@@ -27,6 +28,7 @@ export function CriterionActions({
   active: boolean;
   references: string;
 }) {
+  useI18n();
   const [mode, setMode] = useState<"edit" | "validated" | "rejected" | null>(
     null,
   );
@@ -71,7 +73,7 @@ export function CriterionActions({
       setMode(null);
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "No se pudo guardar el criterio",
+        e instanceof Error ? e.message : t("No se pudo guardar el criterio"),
       );
       if (e instanceof ApiError && e.status === 409) {
         try {
@@ -92,25 +94,28 @@ export function CriterionActions({
           disabled={!active || !canEdit}
           onClick={() => open("edit")}
         >
-          Editar {criterion.code}
+          {t("Editar") + " "}
+          {criterion.code}
         </Button>
         <Button
           disabled={!active || !canReview || criterion.status === "validated"}
           onClick={() => open("validated")}
         >
-          Validar {criterion.code}
+          {t("Validar") + " "}
+          {criterion.code}
         </Button>
         <Button
           variant="outline"
           disabled={!active || !canReview || criterion.status === "rejected"}
           onClick={() => open("rejected")}
         >
-          Rechazar {criterion.code}
+          {t("Rechazar") + " "}
+          {criterion.code}
         </Button>
       </div>
       {!active && (
         <p className="muted">
-          Activa esta versión para modificar sus criterios.
+          {t("Activa esta versión para modificar sus criterios.")}
         </p>
       )}
       <Dialog
@@ -118,8 +123,11 @@ export function CriterionActions({
         onOpenChange={(v) => {
           if (!v && !busy) setMode(null);
         }}
-        title={`${mode === "edit" ? "Editar" : mode === "rejected" ? "Rechazar" : "Validar"} ${base.code}`}
-        description={`Revisión ${base.revision}. Esta decisión es independiente de los requisitos RF/RN.`}
+        title={`${mode === "edit" ? t("Editar") : mode === "rejected" ? t("Rechazar") : t("Validar")} ${base.code}`}
+        description={t(
+          "Revisión {revision}. Esta decisión es independiente de los requisitos RF/RN.",
+          { revision: base.revision },
+        )}
       >
         <form
           className="form-stack"
@@ -128,13 +136,16 @@ export function CriterionActions({
             void save();
           }}
         >
-          <p>Requisitos relacionados: {references}</p>
+          <p>
+            {t("Requisitos relacionados:") + " "}
+            {references}
+          </p>
           {mode === "edit" ? (
             (
               Object.entries({
-                given: "Dado",
-                when: "Cuando",
-                then: "Entonces",
+                given: t("Dado"),
+                when: t("Cuando"),
+                then: t("Entonces"),
               }) as ["given" | "when" | "then", string][]
             ).map(([key, label]) => (
               <TextField key={key} label={label}>
@@ -150,19 +161,19 @@ export function CriterionActions({
             ))
           ) : (
             <dl className="criterion">
-              <dt>Dado</dt>
+              <dt>{t("Dado")}</dt>
               <dd>{base.given}</dd>
-              <dt>Cuando</dt>
+              <dt>{t("Cuando")}</dt>
               <dd>{base.when}</dd>
-              <dt>Entonces</dt>
+              <dt>{t("Entonces")}</dt>
               <dd>{base.then}</dd>
             </dl>
           )}
           <TextField
             label={
               mode === "rejected"
-                ? "Motivo del rechazo (obligatorio)"
-                : "Observaciones"
+                ? t("Motivo del rechazo (obligatorio)")
+                : t("Observaciones")
             }
           >
             <textarea
@@ -175,29 +186,35 @@ export function CriterionActions({
             />
           </TextField>
           <details>
-            <summary>Original generado</summary>
+            <summary>{t("Original generado")}</summary>
             <dl className="criterion">
-              <dt>Dado</dt>
+              <dt>{t("Dado")}</dt>
               <dd>{base.original.given}</dd>
-              <dt>Cuando</dt>
+              <dt>{t("Cuando")}</dt>
               <dd>{base.original.when}</dd>
-              <dt>Entonces</dt>
+              <dt>{t("Entonces")}</dt>
               <dd>{base.original.then}</dd>
             </dl>
           </details>
           {mode === "edit" && (
-            <p>Guardar un cambio deja el criterio pendiente de validación.</p>
+            <p>
+              {t("Guardar un cambio deja el criterio pendiente de validación.")}
+            </p>
           )}
-          {error && <p role="alert">{error}</p>}
+          {error && <p role="alert">{translateMessage(error)}</p>}
           {latest && (
             <section>
-              <h3>Versión vigente · revisión {latest.revision}</h3>
+              <h3>
+                {t("Versión vigente · revisión") + " "}
+                {latest.revision}
+              </h3>
               <p>{latest.given}</p>
               <p>{latest.when}</p>
               <p>{latest.then}</p>
               <p>
-                Tu borrador permanece en el formulario. Cargar la revisión
-                vigente lo sustituirá.
+                {t(
+                  "Tu borrador permanece en el formulario. Cargar la revisión vigente lo sustituirá.",
+                )}
               </p>
               <Button
                 type="button"
@@ -209,7 +226,7 @@ export function CriterionActions({
                   setError("");
                 }}
               >
-                Cargar revisión vigente
+                {t("Cargar revisión vigente")}
               </Button>
             </section>
           )}
@@ -220,7 +237,7 @@ export function CriterionActions({
               disabled={busy}
               onClick={() => setMode(null)}
             >
-              Cancelar
+              {t("Cancelar")}
             </Button>
             <Button
               type="submit"
@@ -236,12 +253,12 @@ export function CriterionActions({
               }
             >
               {busy
-                ? "Guardando…"
+                ? t("Guardando…")
                 : mode === "edit"
-                  ? "Guardar revisión"
+                  ? t("Guardar revisión")
                   : mode === "rejected"
-                    ? "Confirmar rechazo"
-                    : "Confirmar validación"}
+                    ? t("Confirmar rechazo")
+                    : t("Confirmar validación")}
             </Button>
           </div>
         </form>

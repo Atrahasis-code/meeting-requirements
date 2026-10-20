@@ -7,7 +7,7 @@
 - A dedicated worker uses a `flock` lock on the SQLite volume. Each job runs in an isolated spawned process that releases native memory when it exits. The supervisor maintains a heartbeat even during inference.
 - Local SQLite uses foreign keys, busy_timeout 5000, WAL, and short transactions. Alembic initializes the schema before the main services start. The `one_running_job` partial index prevents more than one global `running` job. The API checks that a meeting has no active jobs before accepting another; this check is not a transactional unique constraint per meeting. The worker lock keeps execution sequential.
 
-The queue does not use Redis/Celery. New jobs require manual actions. Internal states use English; the UI translates them. Registered represents a meeting without a file. Blocked and interrupted extend the requested states and retain the reason and checkpoints. Restarting only the API does not change a job that is still running.
+The queue does not use Redis/Celery. New jobs require manual actions. Internal states use English; the UI translates them into the selected interface language. Registered represents a meeting without a file. Blocked and interrupted extend the requested states and retain the reason and checkpoints. Restarting only the API does not change a job that is still running.
 
 ## Volumes
 
@@ -54,3 +54,9 @@ Secrets are never included in response schemas. File endpoints resolve relative 
 Criteria support individual retrieval, editing, and explicit validation/rejection with optimistic revision checks. Changing Given/When/Then returns a criterion to pending; saving identical text does not change its status. Rejection requires a reason, and changes require an active version. Approving a criterion does not alter its original or functional/non-functional requirements (RF/RN in the UI). New history identifies the local user; an old event without identity is not retroactively attributed.
 
 SQLite retains WAL and its connection settings. PostgreSQL is opt-in through a Compose override and uses an advisory lock for a single local worker. Relationships prevent mixing organizations, and each transaction sets its context; the local distribution always uses the local workspace. Storage/provider adapters and execution policy have complete local defaults, without imports or dependencies on a private edition.
+
+## Interface language
+
+English and Spanish use bundled application-message catalogs; Spanish is the default. The selector updates the UI without reloading, keeps drafts mounted, persists `mra-language` in browser storage, and synchronizes open tabs on the same origin. If storage is unavailable, the selection still works for the current page. HTML language metadata, dates, numbers, and plural labels follow the selection.
+
+This preference is independent of the recording's transcription language and never changes meeting content, analysis snapshots, API resource identifiers, original text, or exports. Only static application messages are translated; unknown provider diagnostics retain their original text. There are no translation-service calls or additional runtime dependencies. Custom application entrypoints may register their own static UI catalogs; none are loaded by the community entrypoint unless explicitly imported.

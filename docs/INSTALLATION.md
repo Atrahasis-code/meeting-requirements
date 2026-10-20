@@ -44,3 +44,7 @@ The initialize service prepares volumes with UID/GID 10001 and runs Alembic afte
 To change CPU/RAM, edit `.env` and run `docker compose up -d --force-recreate`. Runtime limits do not automatically limit BuildKit build memory. The **Calidad** (Quality) profile may exceed 3 GiB and be terminated for OOM; increase WORKER_MEM_LIMIT or use **Equilibrado/Económico** (Balanced/Economy).
 
 An interrupted model download is retried from the cache when another transcription starts. Network errors do not authorize sending audio to third parties.
+
+## Interface language
+
+Choose English or Español in the top bar, or inside the navigation menu on mobile. Spanish is the default; the preference is local to the browser and is retained after reloading. Transcription language is a separate setting. Switching interface language does not send data, authorize an analysis, or translate existing recordings, transcripts, requirements, or exports.

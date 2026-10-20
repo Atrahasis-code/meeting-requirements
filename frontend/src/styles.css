@@ -2127,3 +2127,39 @@ th {
   align-self: flex-end;
   margin: -12px -6px 8px;
 }
+
+.language-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.language-selector select {
+  width: auto;
+  min-width: 102px;
+  min-height: 40px;
+  font-size: 14px;
+  padding: 8px;
+}
+.sidebar-language {
+  display: none;
+}
+@media (max-width: 760px) {
+  .desktop-language {
+    display: none;
+  }
+  .sidebar-language {
+    display: flex;
+    margin: 24px 12px 0;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+.field > label {
+  font-weight: 550;
+}

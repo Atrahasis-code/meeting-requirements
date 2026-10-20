@@ -17,4 +17,6 @@ The Alpha was tested on Linux amd64 through Docker Desktop/WSL2; arm64 dependenc
 
 ## Verification of this delivery
 
-On Linux amd64 / Docker Desktop with WSL2: 50 SQLite backend tests, 13 UI tests, and 11 workflow/PostgreSQL tests passed. The six SQLite-suite skips correspond to PostgreSQL/HTTP tests executed in their specific projects. Normal tests use simulated providers without models or personal credentials. The public candidate is checked as an independent tree; the private delivery record retains operational evidence. This verification does not establish native macOS execution or remote-service integration.
+On Linux amd64 / Docker Desktop with WSL2: 50 SQLite backend tests, 21 UI tests, and 11 workflow/PostgreSQL tests passed. The six SQLite-suite skips correspond to PostgreSQL/HTTP tests executed in their specific projects. Normal tests use simulated providers without models or personal credentials. The public candidate is checked as an independent tree; the private delivery record retains operational evidence. This verification does not establish native macOS execution or remote-service integration.
+
+Language tests cover Spanish defaults, persisted English selection, cross-tab changes, unavailable storage, plurals, number/date formatting, validation messages, draft preservation, unchanged requirement content, known API errors, and catalog interpolation parameters. Browser checks exercise both languages in local and private compositions; private checks use synthetic API fixtures rather than real hosted authentication.

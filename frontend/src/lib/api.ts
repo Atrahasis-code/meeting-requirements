@@ -1,3 +1,4 @@
+import { t, translateMessage } from "./i18n";
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -18,7 +19,7 @@ export async function api<T>(
   const upload = path.match(/^\/meetings\/([^/]+)\/upload$/);
   if (uploadHandler && upload && options.body instanceof FormData) {
     const file = options.body.get("file");
-    if (!(file instanceof File)) throw new Error("Selecciona una grabación");
+    if (!(file instanceof File)) throw new Error(t("Selecciona una grabación"));
     return (await uploadHandler(upload[1], file)) as T;
   }
   const headers = new Headers(options.headers);
@@ -30,18 +31,29 @@ export async function api<T>(
     headers.set("X-CSRF-Token", decodeURIComponent(csrf));
   if (options.body && !(options.body instanceof FormData))
     headers.set("Content-Type", "application/json");
-  const response = await fetch("/api" + path, {
-    ...options,
-    headers,
-    credentials: "same-origin",
-  });
+  let response: Response;
+  try {
+    response = await fetch("/api" + path, {
+      ...options,
+      headers,
+      credentials: "same-origin",
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    throw new ApiError(
+      0,
+      t("Error de red. Comprueba la conexión y vuelve a intentarlo."),
+    );
+  }
   if (!response.ok) {
     const error: { detail?: unknown } = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
       typeof error.detail === "string"
-        ? error.detail
-        : `No se pudo completar la operación (${response.status}).`,
+        ? translateMessage(error.detail)
+        : t("No se pudo completar la operación ({status}).", {
+            status: response.status,
+          }),
     );
   }
   return response.status === 204

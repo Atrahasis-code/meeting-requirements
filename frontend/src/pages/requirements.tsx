@@ -1,3 +1,4 @@
+import { t, useI18n, countLabel } from "../lib/i18n";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, ExternalLink, Pencil, X } from "lucide-react";
@@ -23,6 +24,7 @@ export function RequirementTable({
 }: {
   requirements: Requirement[];
 }) {
+  useI18n();
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [module, setModule] = useState("");
@@ -38,11 +40,11 @@ export function RequirementTable({
       <div className="toolbar">
         <div className="filter-group">
           <select
-            aria-label="Filtrar estado"
+            aria-label={t("Filtrar estado")}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t("Todos los estados")}</option>
             {["detected", "unclear", "proposed", "validated", "rejected"].map(
               (v) => (
                 <option key={v} value={v}>
@@ -52,11 +54,11 @@ export function RequirementTable({
             )}
           </select>
           <select
-            aria-label="Filtrar prioridad"
+            aria-label={t("Filtrar prioridad")}
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
           >
-            <option value="">Todas las prioridades</option>
+            <option value="">{t("Todas las prioridades")}</option>
             {["high", "medium", "low", "unspecified"].map((v) => (
               <option key={v} value={v}>
                 {label(v)}
@@ -64,28 +66,30 @@ export function RequirementTable({
             ))}
           </select>
           <select
-            aria-label="Filtrar módulo"
+            aria-label={t("Filtrar módulo")}
             value={module}
             onChange={(e) => setModule(e.target.value)}
           >
-            <option value="">Todos los módulos</option>
+            <option value="">{t("Todos los módulos")}</option>
             {[...new Set(requirements.map((r) => r.module))].map((v) => (
               <option key={v}>{v}</option>
             ))}
           </select>
         </div>
-        <span className="muted">{filtered.length} requisitos</span>
+        <span className="muted">
+          {countLabel("requirements", filtered.length)}
+        </span>
       </div>
       {requirements.length ? (
         <div className="panel table-scroll">
           <table>
             <thead>
               <tr>
-                <th>REQUISITO</th>
-                <th>MÓDULO</th>
-                <th>PRIORIDAD</th>
-                <th>ESTADO</th>
-                <th>EVIDENCIA</th>
+                <th>{t("REQUISITO")}</th>
+                <th>{t("MÓDULO")}</th>
+                <th>{t("PRIORIDAD")}</th>
+                <th>{t("ESTADO")}</th>
+                <th>{t("EVIDENCIA")}</th>
               </tr>
             </thead>
             <tbody>
@@ -107,7 +111,7 @@ export function RequirementTable({
                   <td>
                     <Badge value={r.status} />
                   </td>
-                  <td>{r.evidence.length} referencias</td>
+                  <td>{countLabel("references", r.evidence.length)}</td>
                 </tr>
               ))}
             </tbody>
@@ -115,8 +119,10 @@ export function RequirementTable({
         </div>
       ) : (
         <Empty
-          title="Requisitos con respaldo, no suposiciones"
-          description="Aquí aparecerán los hallazgos del análisis activo. Cada uno conservará su evidencia y necesitará validación humana."
+          title={t("Requisitos con respaldo, no suposiciones")}
+          description={t(
+            "Aquí aparecerán los hallazgos del análisis activo. Cada uno conservará su evidencia y necesitará validación humana.",
+          )}
         />
       )}
       {selected && (
@@ -140,6 +146,7 @@ function RequirementEditor({
   id: string;
   onClose: () => void;
 }) {
+  useI18n();
   const query = useData<Requirement>("/requirements/" + id);
   return (
     <Dialog
@@ -147,8 +154,10 @@ function RequirementEditor({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={query.data?.code ?? "Requisito"}
-      description="Revisa el alcance y su evidencia. La aprobación es siempre manual."
+      title={query.data?.code ?? t("Requisito")}
+      description={t(
+        "Revisa el alcance y su evidencia. La aprobación es siempre manual.",
+      )}
     >
       {query.data ? (
         <RequirementForm key={query.data.id} requirement={query.data} />
@@ -159,6 +168,7 @@ function RequirementEditor({
   );
 }
 function RequirementForm({ requirement: r }: { requirement: Requirement }) {
+  useI18n();
   const action = useAction();
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -184,17 +194,17 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
           (v) =>
             void action.run(
               () => patch("/requirements/" + r.id, v),
-              "Cambios guardados",
+              t("Cambios guardados"),
             ),
         )}
       >
-        <TextField label="Título">
+        <TextField label={t("Título")}>
           <input {...form.register("title")} />
         </TextField>
-        <TextField label="Descripción">
+        <TextField label={t("Descripción")}>
           <textarea rows={4} {...form.register("description")} />
         </TextField>
-        <TextField label="Prioridad sugerida">
+        <TextField label={t("Prioridad sugerida")}>
           <select {...form.register("priority")}>
             {["high", "medium", "low", "unspecified"].map((v) => (
               <option key={v} value={v}>
@@ -203,15 +213,15 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
             ))}
           </select>
         </TextField>
-        <TextField label="Observaciones">
+        <TextField label={t("Observaciones")}>
           <textarea rows={2} {...form.register("observations")} />
         </TextField>
         <Button variant="outline" disabled={action.busy}>
           <Pencil size={15} />
-          Guardar cambios
+          {t("Guardar cambios")}
         </Button>
       </form>
-      <h3>Evidencia de la reunión</h3>
+      <h3>{t("Evidencia de la reunión")}</h3>
       {r.evidence.map((e) => (
         <blockquote key={e.id}>
           <p>“{e.quote}”</p>
@@ -230,7 +240,7 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
       ))}
       {r.questions.length > 0 && (
         <>
-          <h3>Preguntas pendientes</h3>
+          <h3>{t("Preguntas pendientes")}</h3>
           <ul>
             {r.questions.map((q, i) => (
               <li key={i}>{q}</li>
@@ -239,23 +249,27 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
         </>
       )}
       <details>
-        <summary>Texto generado inicialmente</summary>
+        <summary>{t("Texto generado inicialmente")}</summary>
         <p className="preserve">{r.original.description}</p>
       </details>
       <details>
         <summary>
-          Historial de modificaciones ({r.revisions?.length ?? 0})
+          {t("Historial de modificaciones (")}
+          {r.revisions?.length ?? 0})
         </summary>
         {r.revisions?.map((v) => (
           <div key={v.id} className="history-item">
             <strong>{date(v.created_at)}</strong>
             <p>{String(v.after.description ?? "")}</p>
-            <small>Estado: {label(String(v.after.status ?? ""))}</small>
             <small>
-              Autor:{" "}
+              {t("Estado:") + " "}
+              {label(String(v.after.status ?? ""))}
+            </small>
+            <small>
+              {t("Autor:")}{" "}
               {String(
                 (v.after._actor as { label?: string } | undefined)?.label ??
-                  "Registro anterior sin identidad verificada",
+                  t("Registro anterior sin identidad verificada"),
               )}
             </small>
           </div>
@@ -271,12 +285,12 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
                 post("/requirements/" + r.id + "/validate", {
                   status: "rejected",
                 }),
-              "Requisito rechazado",
+              t("Requisito rechazado"),
             )
           }
         >
           <X size={15} />
-          Rechazar
+          {t("Rechazar")}
         </Button>
         <Button
           disabled={action.busy}
@@ -286,12 +300,12 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
                 post("/requirements/" + r.id + "/validate", {
                   status: "validated",
                 }),
-              "Requisito validado manualmente",
+              t("Requisito validado manualmente"),
             )
           }
         >
           <Check size={16} />
-          Validar requisito
+          {t("Validar requisito")}
         </Button>
       </div>
     </div>
