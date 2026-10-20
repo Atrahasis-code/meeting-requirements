@@ -1,6 +1,6 @@
-# Cómo verificar la edición local
+# Verifying the local edition
 
-Ejecuta todas las comprobaciones dentro de Docker:
+Run all checks inside Docker:
 
 ```sh
 sh scripts/test.sh
@@ -9,12 +9,12 @@ sh scripts/test-operations.sh
 sh scripts/test-worker-recovery.sh
 ```
 
-Los proyectos de prueba y sus volúmenes están separados de los datos normales; las suites no requieren cuentas ni modelos. La integración usa ffprobe real, grabaciones sintéticas, transcripción simulada y Mock. Las pruebas de interfaz incluyen cambios de criterios, rechazo con motivo, conservación de borrador tras conflicto y renderizado seguro del texto.
+Test projects and their volumes are separate from normal data; the suites require no accounts or models. Integration uses real ffprobe, synthetic recordings, simulated transcription, and Mock analysis. UI tests cover criterion changes, rejection with a reason, draft preservation after conflicts, and safe text rendering.
 
-Las comprobaciones reales de ChatGPT y faster-whisper son opt-in. No hay llamadas de inferencia para verificar automáticamente una cuenta; hace falta autorización explícita sobre el texto. Conservar evidencia local de cada comprobación sin publicar tokens ni contenidos de reuniones.
+Real ChatGPT and faster-whisper checks are opt-in. There are no inference calls to verify an account automatically; explicit authorization of the text is required. Keep local evidence for each check without publishing tokens or meeting contents.
 
-La Alpha fue probada en Linux amd64 mediante Docker Desktop/WSL2; se construyeron y probaron dependencias e inferencia arm64 mediante emulación. Las modificaciones posteriores requieren su propia verificación antes de afirmar compatibilidad. Las pruebas emuladas no acreditan rendimiento ni ejecución nativa en macOS Intel o Apple Silicon. No se afirma validación nativa de macOS.
+The Alpha was tested on Linux amd64 through Docker Desktop/WSL2; arm64 dependencies and inference were built and tested through emulation. Later changes require their own verification before claiming compatibility. Emulated tests do not establish performance or native execution on macOS Intel or Apple Silicon. Native macOS validation is not claimed.
 
-## Verificación de esta entrega
+## Verification of this delivery
 
-En Linux amd64 / Docker Desktop con WSL2: 50 pruebas del backend SQLite, 13 de interfaz y 11 del flujo/PostgreSQL aprobadas. Las seis omisiones de la suite SQLite corresponden a pruebas de PostgreSQL/HTTP ejecutadas en sus proyectos específicos. Las pruebas normales usan proveedores simulados, sin modelos ni credenciales personales. El candidato público se verifica como árbol independiente; el registro privado de entrega conserva la evidencia operativa. Esta comprobación no acredita ejecución nativa en macOS ni servicios remotos.
+On Linux amd64 / Docker Desktop with WSL2: 50 SQLite backend tests, 13 UI tests, and 11 workflow/PostgreSQL tests passed. The six SQLite-suite skips correspond to PostgreSQL/HTTP tests executed in their specific projects. Normal tests use simulated providers without models or personal credentials. The public candidate is checked as an independent tree; the private delivery record retains operational evidence. This verification does not establish native macOS execution or remote-service integration.

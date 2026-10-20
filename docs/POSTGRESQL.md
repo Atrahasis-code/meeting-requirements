@@ -1,29 +1,29 @@
-# PostgreSQL local opcional
+# Optional local PostgreSQL
 
-SQLite sigue siendo la opción predeterminada. PostgreSQL no añade una suscripción ni convierte la instalación en un servicio alojado.
+SQLite remains the default. PostgreSQL does not add a subscription or turn the installation into a hosted service.
 
-Crea un archivo privado con una contraseña aleatoria y define `POSTGRES_PASSWORD_FILE` con su ruta absoluta. No lo guardes en el repositorio. Luego ejecuta:
+Create a private file with a random password and set `POSTGRES_PASSWORD_FILE` to its absolute path. Do not commit it to the repository. Then run:
 
 ```sh
 docker compose -f compose.yaml -f compose.postgres.yaml up --build -d
 ```
 
-El servicio PostgreSQL no publica puertos. El inicializador root lee únicamente el archivo de contraseña explícito, que puede conservar permisos 0600 en el anfitrión. Copia la contraseña a dos volúmenes privados separados: uno para PostgreSQL (UID 999) y otro para la aplicación (UID 10001), con directorios 0700 y archivos 0600. Los servicios los montan de solo lectura; no reciben otros secretos del anfitrión. Cambiar el archivo no cambia automáticamente la contraseña de una base existente: una discrepancia detiene la inicialización y exige una rotación explícita. La imagen oficial está fijada por digest; la cola usa transacciones cortas y un bloqueo asesor impide dos workers locales. Mantén una base propia por instalación y evita compartirla entre instalaciones activas.
+The PostgreSQL service publishes no ports. The root initializer reads only the explicit password file, which can retain 0600 permissions on the host. It copies the password into two separate private volumes: one for PostgreSQL (UID 999) and one for the application (UID 10001), using 0700 directories and 0600 files. Services mount them read-only and receive no other host secrets. Changing the file does not automatically change an existing database's password: a mismatch stops initialization and requires explicit rotation. The official image is pinned by digest; the queue uses short transactions, and an advisory lock prevents duplicate local workers. Keep a separate database per installation and avoid sharing it between active installations.
 
-Pruebas sin credenciales personales:
+Tests without personal credentials:
 
 ```sh
 sh scripts/test-postgres.sh
 ```
 
-## Migrar desde SQLite
+## Migrate from SQLite
 
-1. Detén backend y worker y crea el backup consistente descrito en OPERATIONS.md. Conserva el origen y comprueba el manifiesto/checksums.
-2. Inicializa un destino PostgreSQL vacío mediante Compose. No reutilices una base con datos. Detén sus servicios de aplicación antes de importar.
-3. Copia el backup al contenedor de mantenimiento y utiliza `restore`: verifica el archivo, importa la instantánea SQLite a PostgreSQL y restaura los archivos de los volúmenes. El esquema del destino debe estar migrado.
-4. El importador conserva identificadores, originales, revisiones y relaciones, comprueba recuentos y hashes lógicos y rechaza destinos no vacíos. La transacción revierte ante error.
-5. Conecta de nuevo ChatGPT si se trata de otra instalación. Los backups excluyen credenciales y no transfieren OAuth.
+1. Stop the backend and worker and create the consistent backup described in OPERATIONS.md. Retain the source and verify the manifest/checksums.
+2. Initialize an empty PostgreSQL destination through Compose. Do not reuse a database containing data. Stop its application services before importing.
+3. Copy the backup into the maintenance container and use `restore`: it verifies the archive, imports the SQLite snapshot into PostgreSQL, and restores volume files. The destination schema must already be migrated.
+4. The importer preserves identifiers, originals, revisions, and relationships, checks counts and logical hashes, and rejects nonempty destinations. The transaction rolls back on error.
+5. Reconnect ChatGPT if this is another installation. Backups exclude credentials and do not transfer OAuth.
 
-Para importar únicamente una copia de la base, el comando del contenedor es `python -m app.migrate_database --source /tmp/snapshot.sqlite3`; los archivos multimedia/transcripciones/exportaciones deben transferirse con el backup completo. Nunca pases la base SQLite en uso como origen de una migración.
+To import only a database copy, the container command is `python -m app.migrate_database --source /tmp/snapshot.sqlite3`; media, transcripts, and exports must be transferred using the full backup. Never use the active SQLite database as a migration source.
 
-El backup de PostgreSQL local genera una instantánea SQLite portable con el esquema vigente, además de los archivos, para reutilizar la comprobación de integridad y el formato de restauración. No utiliza ni requiere herramientas PostgreSQL en el anfitrión.
+Local PostgreSQL backup generates a portable SQLite snapshot with the current schema, alongside the files, to reuse integrity checks and the restoration format. It neither uses nor requires PostgreSQL tools on the host.

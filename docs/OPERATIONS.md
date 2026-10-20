@@ -1,10 +1,10 @@
-# Backup, restauración y migración
+# Backup, restoration, and migration
 
-Las herramientas de mantenimiento corren dentro de contenedores; no requieren utilidades de Python ni tar en el host. Los ejemplos usan nombres de contenedores auxiliares exclusivos de esta operación. No utilices nombres que ya pertenezcan a otro trabajo.
+Maintenance tools run inside containers; Python and tar utilities are not required on the host. The examples use helper-container names reserved for this operation. Do not use names that already belong to another task.
 
-## Backup consistente
+## Consistent backup
 
-Detén las escrituras y crea un archivo portable. No copies únicamente el archivo SQLite mientras los servicios escriben.
+Stop writes and create a portable archive. Do not copy only the SQLite file while services are writing.
 
 ```sh
 mkdir -p backups
@@ -15,13 +15,13 @@ docker rm mra-backup
 docker compose start backend worker
 ```
 
-Para incluir modelos, añade `--include-models` al final del comando backup. Los enlaces internos del caché se guardan como archivos normales para permitir restauración sin red; esto puede aumentar el tamaño del paquete. Se excluyen los enlaces que apuntan fuera del volumen de modelos. El archivo contiene copia SQLite mediante su API de backup, archivos multimedia, transcripciones y exportaciones, más manifiesto y checksums SHA-256. No incluye autenticación ni tokens. Protege el backup porque sí contiene reuniones y datos corporativos. Guárdalo en `backups/`, excluido de Git y del contexto Docker. Los archivos `*.tar.gz` y `*.tgz` también se excluyen aunque se copien a otra carpeta; estas reglas no protegen archivos ya versionados ni sustituyen el control de acceso o cifrado del backup.
+To include models, append `--include-models` to the backup command. Internal cache links are stored as regular files to allow offline restoration; this may increase archive size. Links pointing outside the model volume are excluded. The archive contains a SQLite copy made through its backup API, media, transcripts, and exports, plus a manifest and SHA-256 checksums. Authentication and tokens are excluded. Protect the backup because it contains meetings and business data. Store it in `backups/`, which is excluded from Git and the Docker context. Files matching `*.tar.gz` and `*.tgz` are also excluded if copied elsewhere; these rules do not protect already tracked files or replace backup access controls or encryption.
 
-No reinicies servicios hasta que termine la copia; los archivos y la base deben pertenecer al mismo período de mantenimiento. El bloqueo impide hacer backup con el worker activo; el operador también debe detener la API.
+Do not restart services until the copy finishes; files and database must belong to the same maintenance window. The lock prevents backup while the worker is active; the operator must also stop the API.
 
-## Restaurar en volúmenes nuevos
+## Restore into new volumes
 
-Selecciona un proyecto Compose nuevo; no sobrescribas una instalación con datos. Copia también el código/versión de la aplicación y los archivos de configuración no sensibles necesarios.
+Select a new Compose project; do not overwrite an installation containing data. Also copy the application code/version and any required non-sensitive configuration files.
 
 ```sh
 docker compose -p meeting-restored build backend worker frontend initialize maintenance
@@ -33,23 +33,23 @@ docker rm -f mra-restore
 docker compose -p meeting-restored up -d
 ```
 
-Detén antes la instalación original si ambas publican el mismo APP_PORT. La restauración rechaza volúmenes con datos, archivos con rutas inseguras, enlaces, entradas fuera de los directorios permitidos, checksums incorrectos y SQLite sin integridad referencial. El arranque posterior ejecuta Alembic y comprueba salud.
+Stop the original installation first if both publish the same APP_PORT. Restoration rejects volumes containing data, unsafe archive paths, links, entries outside allowed directories, incorrect checksums, and SQLite databases without referential integrity. Subsequent startup runs Alembic and checks health.
 
-## Migrar entre equipos
+## Move between machines
 
-1. Crea el backup consistente y lleva código, lockfiles y backup al equipo nuevo.
-2. Instala Docker/Compose en el equipo nuevo. Construye nativamente para su arquitectura.
-3. Restaura en volúmenes nuevos siguiendo el procedimiento anterior.
-4. Configura recursos adecuados y verifica proyectos, reuniones, transcripciones, requisitos y exportaciones.
-5. Conecta ChatGPT nuevamente. La instalación nueva crea un host ID distinto y no recibe tokens del equipo anterior.
+1. Create a consistent backup and take the code, lockfiles, and backup to the new machine.
+2. Install Docker/Compose on the new machine. Build natively for its architecture.
+3. Restore into new volumes using the procedure above.
+4. Configure adequate resources and verify projects, meetings, transcripts, requirements, and exports.
+5. Connect ChatGPT again. The new installation creates a different host ID and does not receive the previous machine's tokens.
 
-Las sesiones de la instalación original permanecen allí hasta que las desconectes. No transfieras volúmenes de autenticación como parte del backup de datos. Conserva el backup original hasta terminar la validación. `docker compose down` conserva datos; `down -v` los elimina.
+Sessions remain in the original installation until disconnected. Do not transfer authentication volumes as part of a data backup. Keep the original backup until validation finishes. `docker compose down` preserves data; `down -v` deletes it.
 
-## Diagnóstico
+## Diagnostics
 
-`docker compose ps` muestra salud, `docker compose logs backend worker` las etapas/errores operativos y `docker stats` permite observar CPU/RAM. Un contenedor unhealthy no se reinicia automáticamente por el solo healthcheck; la política de reinicio actúa cuando el proceso termina. Si un trabajo fue interrumpido, reintenta desde la interfaz; no edites SQLite manualmente.
+`docker compose ps` shows health, `docker compose logs backend worker` shows operational stages/errors, and `docker stats` shows CPU/RAM usage. An unhealthy container does not restart automatically just because of its healthcheck; restart policy acts when the process exits. If a job was interrupted, retry from the UI; do not edit SQLite manually.
 
-## Comprobaciones reproducibles
+## Reproducible checks
 
 ```sh
 sh scripts/test.sh
@@ -59,8 +59,8 @@ sh scripts/check-platform.sh linux/amd64
 sh scripts/check-platform.sh linux/arm64
 ```
 
-La prueba de operaciones usa proyectos exclusivos con sufijo de proceso, verifica la exclusión de un segundo worker, crea datos sintéticos, transmite el backup entre contenedores, restaura y recrea servicios. Detiene sus contenedores al terminar y conserva los volúmenes para inspección. No accede a los datos normales.
+The operations test uses exclusive projects with process-ID suffixes, checks that a second worker is excluded, creates synthetic data, streams the backup between containers, restores it, and recreates services. It stops its containers when finished and retains volumes for inspection. It does not access normal application data.
 
-La comprobación de plataforma carga imágenes locales y ejecuta imports nativos y FFmpeg. En un equipo amd64, ejecutar arm64 mediante QEMU constituye emulación. Esta comprobación no sustituye una inferencia real ni una prueba en macOS nativo.
+The platform check loads local images and runs native imports and FFmpeg. On an amd64 machine, running arm64 through QEMU is emulation. This check does not replace real inference or native macOS testing.
 
-La prueba de recuperación ejecuta únicamente Mock en un proyecto aislado, espera checkpoints, envía SIGKILL al worker y comprueba que el trabajo queda interrumpido sin perder los bloques confirmados ni reanudar inferencia automáticamente.
+The recovery test runs only Mock in an isolated project, waits for checkpoints, sends SIGKILL to the worker, and verifies that the job is interrupted without losing committed blocks or automatically resuming inference.

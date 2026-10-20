@@ -1,9 +1,9 @@
-# Proveedores locales
+# Local providers
 
-Disponibles: ChatGPT mediante OAuth oficial propio de la aplicación y Mock explícito para pruebas sin conexión. Cada instalación conserva su autenticación y controles de consumo; nunca utiliza cuentas de otro operador.
+Available providers are ChatGPT through official application-owned OAuth and explicit Mock for offline tests. Each installation keeps its own authentication and usage controls; it never uses another operator's account.
 
-La interfaz de proveedores está separada del procesamiento y de los datos. Añadir un proveedor requiere autenticación oficialmente permitida para terceros, aislamiento de credenciales, consentimiento por entrada, validación estructural y de evidencia, pruebas sin credenciales y una comprobación real autorizada independiente.
+The provider interface is separate from processing and data. Adding a provider requires authentication officially permitted for third-party applications, credential isolation, per-input consent, structural and evidence validation, credential-free tests, and a separate authorized real check.
 
-Claude y Grok no se muestran como conexiones OAuth disponibles. No se extraen tokens de sus aplicaciones ni se supone que una suscripción de chat habilite una API. No se implementa un cambio automático a facturación por claves.
+Claude and Grok are not shown as available OAuth connections. Tokens are not extracted from their applications, and a chat subscription is not assumed to provide API access. Automatic switching to key-based billing is not implemented.
 
-Consulta las condiciones actuales del proveedor antes de añadir una integración. Documentación de referencia: [OpenAI](https://developers.openai.com/siwc/token-sharing-open-source), [Anthropic](https://code.claude.com/docs/en/legal-and-compliance), [xAI](https://docs.x.ai/developers/quickstart).
+Review the provider's current terms before adding an integration. Reference documentation: [OpenAI](https://developers.openai.com/siwc/token-sharing-open-source), [Anthropic](https://code.claude.com/docs/en/legal-and-compliance), [xAI](https://docs.x.ai/developers/quickstart).

@@ -1,56 +1,56 @@
-# Arquitectura
+# Architecture
 
-## Componentes
+## Components
 
-- Frontend React/TypeScript/Vite, Tailwind y componentes de patrón shadcn/ui sobre Radix. Router, TanStack Query y formularios React Hook Form/Zod. Nginx no root sirve la compilación y hace proxy de API/callback. Vite realiza el mismo proxy durante desarrollo.
-- FastAPI separa contratos Pydantic, acceso a datos, servicios de aplicación, almacenamiento, OAuth, análisis y exportación.
-- Worker dedicado con bloqueo `flock` en el volumen SQLite. Cada trabajo usa un proceso spawn aislado que libera memoria nativa al terminar. El supervisor mantiene heartbeat incluso durante inferencia.
-- SQLite local con claves foráneas, busy_timeout 5000, WAL y transacciones cortas. La inicialización de esquema ocurre con Alembic antes de los servicios principales. El índice parcial `one_running_job` impide más de un trabajo `running` global. La API comprueba que la reunión no tenga trabajos activos antes de admitir otro; esta comprobación no constituye una restricción única transaccional por reunión. El bloqueo del worker mantiene la ejecución secuencial.
+- React/TypeScript/Vite frontend, Tailwind, and shadcn/ui-style components built on Radix. Routing, TanStack Query, and React Hook Form/Zod forms. Non-root Nginx serves the build and proxies the API and callback. Vite provides the same proxy during development.
+- FastAPI separates Pydantic contracts, data access, application services, storage, OAuth, analysis, and export.
+- A dedicated worker uses a `flock` lock on the SQLite volume. Each job runs in an isolated spawned process that releases native memory when it exits. The supervisor maintains a heartbeat even during inference.
+- Local SQLite uses foreign keys, busy_timeout 5000, WAL, and short transactions. Alembic initializes the schema before the main services start. The `one_running_job` partial index prevents more than one global `running` job. The API checks that a meeting has no active jobs before accepting another; this check is not a transactional unique constraint per meeting. The worker lock keeps execution sequential.
 
-La cola no usa Redis/Celery. Los trabajos nuevos solo aparecen por acciones manuales. Los estados internos están en inglés; la UI los traduce. Registered representa una reunión aún sin archivo. Blocked e interrupted complementan los estados solicitados y conservan el motivo y los checkpoints. Reiniciar solo la API no modifica un trabajo que sigue ejecutándose.
+The queue does not use Redis/Celery. New jobs require manual actions. Internal states use English; the UI translates them. Registered represents a meeting without a file. Blocked and interrupted extend the requested states and retain the reason and checkpoints. Restarting only the API does not change a job that is still running.
 
-## Volúmenes
+## Volumes
 
-| Volumen | Montaje | Contenido |
+| Volume | Mount | Contents |
 |---|---|---|
-| database | /data/db | SQLite, WAL/SHM, bloqueo del worker y heartbeat persistido |
-| media | /data/media | Grabaciones con nombres UUID y formatos validados |
-| transcripts | /data/transcripts | TXT/JSON/SRT/VTT y fragmento temporal de audio |
-| exports | /data/exports | Paquetes por proyecto/reunión/UUID, nunca sobreescritos |
-| models | /data/models | Modelos reutilizables de Hugging Face/CTranslate2 |
-| authentication | /data/auth | Host ID, registros OAuth y tokens de esta aplicación |
+| database | /data/db | SQLite, WAL/SHM, worker lock, and persisted heartbeat |
+| media | /data/media | Recordings with UUID names and validated formats |
+| transcripts | /data/transcripts | TXT/JSON/SRT/VTT and temporary audio chunk |
+| exports | /data/exports | Packages identified by project/meeting/UUID, never overwritten |
+| models | /data/models | Reusable Hugging Face/CTranslate2 models |
+| authentication | /data/auth | Host ID, OAuth registrations, and this application's tokens |
 
-El proyecto predeterminado es `meeting-requirements-ai-local`; los nombres efectivos de los volúmenes llevan ese prefijo. Para instalaciones adicionales usa un nombre distinto con `docker compose -p <nombre>` en todos los comandos y un `APP_PORT` disponible. Reutilizar un nombre de proyecto reutiliza sus volúmenes, incluida la autenticación. `docker compose down` conserva los volúmenes. **No uses `down -v` con datos reales.** NFS/SMB/9p/virtiofs no están admitidos para SQLite. No remapees database a carpetas sincronizadas o compartidas entre equipos.
+The default project is `meeting-requirements-ai-local`; effective volume names use that prefix. For additional installations, use a distinct name with `docker compose -p <nombre>` in every command and an available `APP_PORT`. Reusing a project name reuses its volumes, including authentication. `docker compose down` preserves volumes. **Do not use `down -v` with real data.** NFS/SMB/9p/virtiofs are not supported for SQLite. Do not remap database to synchronized folders or folders shared between machines.
 
-## Transcripción y análisis
+## Transcription and analysis
 
-FFmpeg produce un fragmento mono PCM 16 kHz de cinco minutos con dos segundos de contexto en cada extremo. Las palabras se asignan a intervalos centrales semiabiertos por su punto medio global. Así, un mismo resultado temporal no se incorpora dos veces; la calidad acústica de palabras reconocidas de forma distinta en ambos fragmentos sigue requiriendo revisión humana. El avance indica segundos de fragmentos confirmados, no una predicción de tiempo restante.
+FFmpeg produces a five-minute mono PCM 16 kHz chunk with two seconds of context at each end. Words are assigned to half-open central intervals using their global midpoint. This prevents the same timestamped result from being included twice; words recognized differently in overlapping chunks still require human review. Progress indicates seconds of committed chunks, not an estimate of remaining time.
 
-La descarga y carga de modelos son indeterminadas. Una cancelación se comprueba entre fragmentos/segmentos; tras el período de gracia se termina el grupo de procesos y se conserva lo confirmado. Los checkpoints no son transcripciones completas. No hay botón de pausa: cancelar y reintentar permite continuar desde checkpoints.
+Model download and loading durations are indeterminate. Cancellation is checked between chunks/segments; after the grace period, the process group is terminated and committed work is retained. Checkpoints are not complete transcripts. There is no pause button: canceling and retrying allows processing to continue from checkpoints.
 
-El texto original es inmutable. Las correcciones usan una revisión global para detectar ediciones concurrentes. Un análisis conserva su entrada autorizada, contexto, glosario, revisión y hash. Los requisitos conservan contenido generado, evidencia y revisiones humanas. Las exportaciones utilizan los requisitos editados y la copia de transcripción correspondiente al análisis, evitando mezclar evidencia con correcciones posteriores incompatibles.
+Original text is immutable. Corrections use a global revision to detect concurrent edits. An analysis retains its authorized input, context, glossary, revision, and hash. Requirements retain generated content, evidence, and human revisions. Exports use the edited requirements and the transcript snapshot belonging to the analysis, avoiding a mix of evidence and incompatible later corrections.
 
-La extracción de entradas largas se realiza por bloques de segmentos. Se validan citas, referencias y códigos y se fusionan duplicados exactos dentro de la ejecución. No existe consolidación semántica entre reuniones. Los resultados no aprobados se exportan con su estado; una exportación nunca equivale a aprobación. La API aporta `code_mapping` para resolver referencias generadas a los códigos persistidos de cada versión en historias, criterios y backlog. El JSON original se conserva inmutable; las dependencias se exportan con códigos legibles y la matriz incluye backlog.
+Long inputs are extracted in blocks of segments. Citations, references, and codes are validated, and exact duplicates are merged within the run. There is no semantic consolidation across meetings. Unapproved results are exported with their status; an export never constitutes approval. The API provides `code_mapping` to resolve generated references to each version's persisted codes in stories, criteria, and backlog. Original JSON remains immutable; dependencies are exported with readable codes, and the matrix includes the backlog.
 
 ## API
 
-OpenAPI está disponible en `/api/openapi.json` y la documentación interactiva en `/api/docs`, a través del proxy local. Se mantienen proyectos, reuniones, carga, transcribe/analyze, jobs/cancel, transcript-segments, requirements/validate, exports/download, health y settings.
+OpenAPI is available at `/api/openapi.json` and interactive documentation at `/api/docs` through the local proxy. The API retains projects, meetings, uploads, transcribe/analyze, jobs/cancel, transcript-segments, requirements/validate, exports/download, health, and settings.
 
-Cambios respecto al documento inicial:
+Changes from the initial specification:
 
-- GET `/api/dashboard` devuelve contadores y trabajos reales.
-- GET `/api/meetings/{id}/analysis-input` devuelve la entrada exacta y su hash; POST analyze exige ese hash y consentimiento para un proveedor externo.
-- GET `/api/meetings/{id}/analyses`, POST `/api/analysis-runs/{id}/activate` y GET `/api/meetings/{id}/exports` administran versiones.
-- POST `/api/jobs/{id}/retry` exige nueva autorización para análisis y permite continuar checkpoints compatibles.
-- DELETE `/api/meetings/{id}/media?confirm=true` elimina solo audio/video, conservando la evidencia textual; DELETE meeting elimina todo tras confirmación.
-- GET `/api/meetings/{id}/transcript/download?format=txt|json|srt|vtt` y GET export download con `file` descargan formatos/documentos permitidos.
-- La UI utiliza polling cada dos segundos; no se implementa `/jobs/{id}/events` porque no se usa SSE.
-- OAuth y catálogo usan `/api/auth/chatgpt/*`, `/auth/callback` y `/api/providers/chatgpt/models`.
+- GET `/api/dashboard` returns actual counters and jobs.
+- GET `/api/meetings/{id}/analysis-input` returns the exact input and its hash; POST analyze requires that hash and consent for an external provider.
+- GET `/api/meetings/{id}/analyses`, POST `/api/analysis-runs/{id}/activate`, and GET `/api/meetings/{id}/exports` manage versions.
+- POST `/api/jobs/{id}/retry` requires renewed authorization for analysis and allows compatible checkpoints to continue.
+- DELETE `/api/meetings/{id}/media?confirm=true` removes only audio/video, retaining textual evidence; DELETE meeting removes everything after confirmation.
+- GET `/api/meetings/{id}/transcript/download?format=txt|json|srt|vtt` and GET export download with `file` download allowed formats/documents.
+- The UI polls every two seconds; `/jobs/{id}/events` is not implemented because SSE is not used.
+- OAuth and the model catalog use `/api/auth/chatgpt/*`, `/auth/callback`, and `/api/providers/chatgpt/models`.
 
-Los secretos nunca forman parte de schemas de respuesta. Los endpoints de archivos resuelven rutas relativas dentro del volumen autorizado. Se validan tamaño real recibido, extensión, contenedor y presencia de audio. No se interpolan comandos de shell.
+Secrets are never included in response schemas. File endpoints resolve relative paths within the authorized volume. Actual received size, extension, media container, and audio presence are validated. Shell commands are not interpolated.
 
-## Revisiones, PostgreSQL y extensiones
+## Revisions, PostgreSQL, and extensions
 
-Los criterios tienen consulta individual, edición y validación/rechazo explícitos con revisión optimista. Una modificación de Dado/Cuando/Entonces devuelve a pendiente; un guardado idéntico no cambia el estado. Se exige motivo de rechazo y versión activa. Originales y RF/RN no se alteran al aprobar un criterio. El historial nuevo identifica al usuario local; un evento antiguo sin identidad no se atribuye retroactivamente.
+Criteria support individual retrieval, editing, and explicit validation/rejection with optimistic revision checks. Changing Given/When/Then returns a criterion to pending; saving identical text does not change its status. Rejection requires a reason, and changes require an active version. Approving a criterion does not alter its original or functional/non-functional requirements (RF/RN in the UI). New history identifies the local user; an old event without identity is not retroactively attributed.
 
-SQLite conserva WAL y sus opciones de conexión. PostgreSQL es opt-in mediante override Compose y utiliza bloqueo asesor para un único worker local. Las relaciones impiden mezclar organizaciones y cada transacción establece su contexto; la distribución local utiliza siempre el espacio local. Los adaptadores de almacenamiento/proveedor y la política de ejecución tienen valores predeterminados locales completos, sin imports o dependencias de una edición privada.
+SQLite retains WAL and its connection settings. PostgreSQL is opt-in through a Compose override and uses an advisory lock for a single local worker. Relationships prevent mixing organizations, and each transaction sets its context; the local distribution always uses the local workspace. Storage/provider adapters and execution policy have complete local defaults, without imports or dependencies on a private edition.

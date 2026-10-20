@@ -10,7 +10,7 @@ A self-hosted workspace for recording review, local transcription, AI-assisted a
 
 ![The workspace overview, showing synthetic demonstration data](docs/assets/workspace.png)
 
-> **Alpha software.** The interface and most detailed guides are currently in Spanish. This edition is designed for a single owner on a local machine. It is not a public, multi-user service.
+> **Alpha software.** The interface is currently in Spanish; project documentation is in English. This edition is designed for a single owner on a local machine. It is not a public, multi-user service.
 
 ## Quick start
 
@@ -141,7 +141,7 @@ Real transcription checks are separate and opt-in; they may download a model. Se
 
 ## Documentation
 
-Most detailed guides currently use Spanish; the [security policy](docs/SECURITY.md) is available in English. Commands and file paths are shared with this README.
+All guides below are available in English. Spanish labels are retained where they identify controls in the current interface.
 
 | Guide | Contents |
 | --- | --- |
