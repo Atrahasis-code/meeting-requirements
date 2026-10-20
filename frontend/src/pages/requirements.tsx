@@ -1,3 +1,4 @@
+import { LocalizedForm } from "../components/localized-form";
 import { t, useI18n, countLabel } from "../lib/i18n";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -16,7 +17,7 @@ import {
   useData,
 } from "../components/shared";
 import { patch, post } from "../lib/api";
-import { date, label, time } from "../lib/utils";
+import { date, label, time, actorLabel } from "../lib/utils";
 import type { Requirement } from "../types";
 
 export function RequirementTable({
@@ -188,7 +189,7 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
           {r.actor} · {r.module}
         </span>
       </div>
-      <form
+      <LocalizedForm
         className="form-stack"
         onSubmit={form.handleSubmit(
           (v) =>
@@ -220,7 +221,7 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
           <Pencil size={15} />
           {t("Guardar cambios")}
         </Button>
-      </form>
+      </LocalizedForm>
       <h3>{t("Evidencia de la reunión")}</h3>
       {r.evidence.map((e) => (
         <blockquote key={e.id}>
@@ -267,9 +268,10 @@ function RequirementForm({ requirement: r }: { requirement: Requirement }) {
             </small>
             <small>
               {t("Autor:")}{" "}
-              {String(
-                (v.after._actor as { label?: string } | undefined)?.label ??
-                  t("Registro anterior sin identidad verificada"),
+              {actorLabel(
+                v.after._actor as
+                  | { id?: string; label?: string; kind?: string }
+                  | undefined,
               )}
             </small>
           </div>

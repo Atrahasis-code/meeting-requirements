@@ -1,3 +1,4 @@
+import { LocalizedForm } from "../components/localized-form";
 import { t, useI18n, getLanguage, translateMessage } from "../lib/i18n";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,7 +22,7 @@ import {
   useData,
 } from "../components/shared";
 import { patch, post } from "../lib/api";
-import { bytes } from "../lib/utils";
+import { bytes, label, providerStatus } from "../lib/utils";
 import type { AuthStatus, Preferences } from "../types";
 const schema = z.object({
   profile: z.string(),
@@ -191,7 +192,7 @@ function SettingsForm({
         {connection.error && (
           <div className="error-box">
             {t("Estado del proveedor:") + " "}
-            {connection.error}
+            {providerStatus(connection.error)}
           </div>
         )}
         <div className="subtle-divider" />
@@ -274,7 +275,7 @@ function SettingsForm({
         </div>
       </section>
       <div className="form-stack">
-        <form
+        <LocalizedForm
           className="panel padded form-stack"
           onSubmit={form.handleSubmit(
             (v) =>
@@ -355,7 +356,7 @@ function SettingsForm({
             )}
           </p>
           <Button disabled={action.busy}>{t("Guardar preferencias")}</Button>
-        </form>
+        </LocalizedForm>
         <section className="panel padded">
           <h2>{t("Almacenamiento local")}</h2>
           <p>
@@ -365,7 +366,7 @@ function SettingsForm({
           <dl className="storage-list">
             {Object.entries(preferences.storage).map(([name, path]) => (
               <div key={name}>
-                <dt>{name}</dt>
+                <dt>{label(name)}</dt>
                 <dd>{path}</dd>
               </div>
             ))}

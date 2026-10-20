@@ -198,3 +198,144 @@ it("provides nonempty English translations with matching interpolation parameter
     expect(params(translation), source).toEqual(params(source));
   }
 });
+
+it("retranslates rendered errors, diagnostics and parameterized notifications in both directions", () => {
+  setLanguage("en");
+  const processing = translateMessage(
+    "Falló la etapa de procesamiento (ValueError). Reintenta o revisa la configuración.",
+  );
+  expect(processing).toBe(
+    "Processing failed (ValueError). Retry or review the configuration.",
+  );
+  const invalid = translateMessage(
+    "ChatGPT devolvió un análisis que no supera la validación: hay códigos de requisitos duplicados; faltan campos obligatorios. Se conservaron los resultados anteriores; la respuesta rechazada no se activó. Puedes revisar la entrada y reanudar manualmente.",
+  );
+  expect(invalid).toContain(
+    "there are duplicate requirement codes; required fields are missing",
+  );
+  expect(translateMessage("El texto no puede superar 200 caracteres.")).toBe(
+    "Text cannot exceed 200 characters.",
+  );
+  setLanguage("es");
+  expect(translateMessage(processing)).toBe(
+    "Falló la etapa de procesamiento (ValueError). Reintenta o revisa la configuración.",
+  );
+  expect(translateMessage(invalid)).toContain(
+    "hay códigos de requisitos duplicados; faltan campos obligatorios",
+  );
+});
+
+it("updates existing errors and notifications when language changes without dismissing a dialog", async () => {
+  const { Notifications, Loading, useAction } =
+    await import("../components/shared");
+  function Failure() {
+    const action = useAction();
+    return (
+      <button
+        onClick={() =>
+          void action.run(async () => {
+            throw new Error(
+              "Falló la etapa de procesamiento (ValueError). Reintenta o revisa la configuración.",
+            );
+          })
+        }
+      >
+        Fail
+      </button>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Notifications>
+        <Failure />
+        <Loading
+          error={
+            new Error(
+              "Almacenamiento ocupado o no disponible; reintenta la operación",
+            )
+          }
+        />
+      </Notifications>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByText("Fail"));
+  await screen.findByText(/Falló la etapa/);
+  act(() => setLanguage("en"));
+  expect(
+    screen.getByText(
+      "Processing failed (ValueError). Retry or review the configuration.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByText("Storage is busy or unavailable; retry the operation"),
+  ).toBeVisible();
+  act(() => setLanguage("es"));
+  expect(screen.getByText(/Falló la etapa/)).toBeVisible();
+});
+
+it("localizes native required and email validation without clearing a draft", async () => {
+  const { LocalizedForm } = await import("../components/localized-form");
+  render(
+    <LocalizedForm>
+      <input aria-label="Email" type="email" required defaultValue="invalid" />
+      <button>Submit</button>
+    </LocalizedForm>,
+  );
+  const input = screen.getByLabelText("Email") as HTMLInputElement;
+  fireEvent.invalid(input);
+  expect(input.validationMessage).toBe(
+    "Introduce un correo electrónico válido.",
+  );
+  act(() => setLanguage("en"));
+  expect(input.validationMessage).toBe("Enter a valid email address.");
+  expect(input.value).toBe("invalid");
+  fireEvent.input(input, { target: { value: "" } });
+  fireEvent.invalid(input);
+  expect(input.validationMessage).toBe("Complete this field.");
+  act(() => setLanguage("es"));
+  expect(input.validationMessage).toBe("Completa este campo.");
+  fireEvent.input(input, { target: { value: "test@example.invalid" } });
+  expect(input.checkValidity()).toBe(true);
+});
+
+it("localizes storage labels and known OAuth states while preserving diagnostic identifiers", async () => {
+  const { label, providerStatus, actorLabel } = await import("./utils");
+  setLanguage("en");
+  expect(label("transcripts")).toBe("Transcript files");
+  expect(
+    actorLabel({ id: "local-owner", kind: "local", label: "Usuario local" }),
+  ).toBe("Local user");
+  expect(
+    actorLabel({ id: "real-user", kind: "user", label: "Usuario local" }),
+  ).toBe("Usuario local");
+  expect(label("validate_upload")).toBe("Validating recording");
+  const status = providerStatus("refresh_token_expired");
+  expect(status).toContain("Reconnect the account.");
+  expect(status).toContain("(refresh_token_expired)");
+  setLanguage("es");
+  expect(providerStatus("refresh_token_expired")).toContain(
+    "Vuelve a conectar la cuenta.",
+  );
+  expect(providerStatus("unknown_code")).toBe("unknown_code");
+});
+
+it("does not render Pydantic English errors or submitted input from a structured API validation error", async () => {
+  setLanguage("es");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({
+        detail: [{ msg: "Field required", input: "private draft" }],
+      }),
+    }),
+  );
+  await expect(api("/criteria/test")).rejects.toThrow(
+    "La solicitud no es válida.",
+  );
+  setLanguage("en");
+  await expect(api("/criteria/test")).rejects.toThrow(
+    "The request is invalid.",
+  );
+});

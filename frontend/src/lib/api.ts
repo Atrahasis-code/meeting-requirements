@@ -51,9 +51,13 @@ export async function api<T>(
       response.status,
       typeof error.detail === "string"
         ? translateMessage(error.detail)
-        : t("No se pudo completar la operación ({status}).", {
-            status: response.status,
-          }),
+        : Array.isArray(error.detail)
+          ? t(
+              "La solicitud no es válida. Revisa los datos e inténtalo de nuevo.",
+            )
+          : t("No se pudo completar la operación ({status}).", {
+              status: response.status,
+            }),
     );
   }
   return response.status === 204

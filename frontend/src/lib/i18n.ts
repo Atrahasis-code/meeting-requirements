@@ -51,14 +51,53 @@ export function translateMessage(message: string): string {
     ? message
     : Object.keys(catalog).find((key) => catalog[key] === message);
   if (key !== undefined) return renderMessage(key);
-  const operation = message.match(
-    /^(?:No se pudo completar la operación|Could not complete the operation) \((\d+)\)\.$/,
-  );
-  return operation
-    ? renderMessage("No se pudo completar la operación ({status}).", {
-        status: operation[1],
-      })
-    : message;
+  // Match only registered UI templates, in either language. Meeting content
+  // never passes through this function; captured identifiers stay unchanged.
+  for (const [source, english] of Object.entries(catalog)) {
+    if (!source.includes("{")) continue;
+    for (const template of [source, english]) {
+      const names: string[] = [];
+      const pattern = template
+        .split(/(\{[a-zA-Z]+\})/g)
+        .map((part) => {
+          if (/^\{[a-zA-Z]+\}$/.test(part)) {
+            names.push(part.slice(1, -1));
+            return "([\\s\\S]+?)";
+          }
+          return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        })
+        .join("");
+      const match = message.match(new RegExp("^" + pattern + "$"));
+      if (!match) continue;
+      return renderMessage(
+        source,
+        Object.fromEntries(
+          names.map((name, i) => {
+            const value = match[i + 1];
+            // Validation reasons are a fixed backend vocabulary. Preserve codes,
+            // exception types and unknown diagnostics for troubleshooting.
+            return [
+              name,
+              name === "diagnostic"
+                ? value
+                    .split("; ")
+                    .map((reason) => {
+                      const key = Object.hasOwn(catalog, reason)
+                        ? reason
+                        : Object.keys(catalog).find(
+                            (key) => catalog[key] === reason,
+                          );
+                      return key === undefined ? reason : renderMessage(key);
+                    })
+                    .join("; ")
+                : value,
+            ];
+          }),
+        ),
+      );
+    }
+  }
+  return message;
 }
 function updateDocument() {
   if (typeof document === "undefined") return;

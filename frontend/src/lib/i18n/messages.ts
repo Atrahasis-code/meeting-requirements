@@ -517,4 +517,132 @@ export const english = {
   DEPENDENCIAS: "DEPENDENCIES",
   GRABACIÓN: "RECORDING",
   segmentos: "segments",
+  "Almacenamiento ocupado o no disponible; reintenta la operación":
+    "Storage is busy or unavailable; retry the operation",
+  "Worker interrumpido; reintento manual disponible":
+    "Worker interrupted; manual retry available",
+  "El proceso se interrumpió; se conservan los checkpoints":
+    "The process was interrupted; checkpoints are retained",
+  "Falló la etapa de procesamiento ({diagnostic}). Reintenta o revisa la configuración.":
+    "Processing failed ({diagnostic}). Retry or review the configuration.",
+  "El runtime no aplicó todas las restricciones de herramientas; inferencia bloqueada":
+    "The runtime did not enforce all tool restrictions; inference blocked",
+  "Selecciona un modelo disponible en Configuración":
+    "Select an available model in Settings",
+  "Revisa la entrada y autoriza con una cuenta conectada":
+    "Review the input and authorize with a connected account",
+  "No se pudo interpretar la respuesta del runtime de ChatGPT. Esto es un fallo de compatibilidad del proveedor, no una validación humana pendiente. Se conservaron los resultados anteriores.":
+    "Could not interpret the ChatGPT runtime response. This is a provider compatibility error, not pending human validation. Previous results were preserved.",
+  "Cuota de ChatGPT alcanzada; revisa Uso y reanuda manualmente":
+    "ChatGPT quota reached; review usage and resume manually",
+  "ChatGPT rechazó el análisis: {diagnostic}":
+    "ChatGPT rejected the analysis: {diagnostic}",
+  "No se completó el análisis. Revisa autenticación, permisos y disponibilidad; no se cambió de facturación. Diagnóstico seguro: {diagnostic}":
+    "Analysis did not complete. Review authentication, permissions, and availability; billing was not changed. Safe diagnostic: {diagnostic}",
+  "ChatGPT devolvió un análisis que no supera la validación: {diagnostic}. Se conservaron los resultados anteriores; la respuesta rechazada no se activó. Puedes revisar la entrada y reanudar manualmente.":
+    "ChatGPT returned an analysis that failed validation: {diagnostic}. Previous results were preserved; the rejected response was not activated. Review the input and resume manually.",
+  "hay códigos de requisitos duplicados":
+    "there are duplicate requirement codes",
+  "hay códigos de historias o criterios duplicados":
+    "there are duplicate story or criterion codes",
+  "una historia, criterio o tarea cita un requisito inexistente":
+    "a story, criterion, or task references a nonexistent requirement",
+  "un criterio o tarea cita una historia inexistente":
+    "a criterion or task references a nonexistent story",
+  "un requisito depende de otro requisito inexistente":
+    "a requirement depends on a nonexistent requirement",
+  "hay códigos de tareas duplicados": "there are duplicate task codes",
+  "una tarea depende de otra tarea inexistente":
+    "a task depends on a nonexistent task",
+  "la respuesta no es JSON válido": "the response is not valid JSON",
+  "faltan campos obligatorios": "required fields are missing",
+  "hay campos que no admite el formato":
+    "there are fields not allowed by the format",
+  "hay valores fuera de las opciones del formato":
+    "there are values outside the allowed format options",
+  "un texto excede el tamaño permitido": "a text exceeds the allowed size",
+  "una sección excede el tamaño permitido":
+    "a section exceeds the allowed size",
+  "falta contenido obligatorio en una sección":
+    "a section is missing required content",
+  "un campo no cumple el formato requerido":
+    "a field does not match the required format",
+  "Intento de conexión expirado o ajeno a este navegador":
+    "Connection attempt expired or does not belong to this browser",
+  "Metadatos de identidad no válidos": "Invalid identity metadata",
+  "La identidad no corresponde al intento iniciado":
+    "The identity does not match the connection attempt",
+  "Callback inválido o expirado": "Invalid or expired callback",
+  "El cliente recibido no coincide": "The received client does not match",
+  "No se autorizó la conexión": "Connection was not authorized",
+  "Registro incompleto": "Incomplete registration",
+  "No se pudo completar el intercambio; inicia un intento nuevo":
+    "Could not complete the exchange; start a new attempt",
+  "La cuenta no coincide con la seleccionada":
+    "The account does not match the selected account",
+  "Cambió la cuenta; revisa la entrada y autoriza nuevamente":
+    "The account changed; review the input and authorize again",
+  "Conecta tu cuenta de ChatGPT": "Connect your ChatGPT account",
+  "La cuenta está conectada sin permiso de uso del plan":
+    "The account is connected without permission to use the plan",
+  "Confirma el límite de créditos de cero en ChatGPT":
+    "Confirm the zero-credit limit in ChatGPT",
+  "Análisis bloqueados por cuota; revisa Uso en ChatGPT":
+    "Analysis blocked by quota; review usage in ChatGPT",
+  "No se pudo renovar la sesión; revisa la conexión":
+    "Could not refresh the session; review the connection",
+  "El permiso del plan ya no está disponible":
+    "Plan permission is no longer available",
+  "Conecta ChatGPT primero": "Connect ChatGPT first",
+  "No se pudo consultar el catálogo de esta cuenta":
+    "Could not retrieve the catalog for this account",
+  "Archivo demasiado grande": "File too large",
+  "Activa un análisis antes de exportar":
+    "Activate an analysis before exporting",
+  "Operación fuera de la organización activa":
+    "Operation outside the active organization",
+  "Cada hallazgo debe citar evidencia": "Each finding must cite evidence",
+  "Evidencia inexistente o cita ajena a la entrada autorizada":
+    "Evidence does not exist or the quote is outside the authorized input",
+  "Requisito duplicado": "Duplicate requirement",
+  "Código incompatible con el tipo de requisito":
+    "Code does not match the requirement type",
+  "Proveedor desconocido": "Unknown provider",
+  "La grabación ya no está disponible": "The recording is no longer available",
+  "Transcripción simulada permitida únicamente en modo de prueba":
+    "Simulated transcription is only allowed in test mode",
+  "Indica el motivo del rechazo": "Enter the reason for rejection",
+  "El contenido no coincide con la extensión":
+    "The content does not match the extension",
+  "No contiene audio válido": "Does not contain valid audio",
+  "Completa este campo.": "Complete this field.",
+  "Introduce un correo electrónico válido.": "Enter a valid email address.",
+  "Introduce un valor válido.": "Enter a valid value.",
+  "Base de datos": "Database",
+  Multimedia: "Media",
+  Modelos: "Models",
+  Autenticación: "Authentication",
+  "Archivos de transcripción": "Transcript files",
+  Exportaciones: "Exports",
+  "Validando grabación": "Validating recording",
+  "Proveedor comercial": "Commercial provider",
+  "La sesión de ChatGPT expiró o fue revocada. Vuelve a conectar la cuenta.":
+    "The ChatGPT session expired or was revoked. Reconnect the account.",
+  "La cuenta no es elegible para compartir el plan de ChatGPT.":
+    "The account is not eligible for ChatGPT plan sharing.",
+  "El plan de ChatGPT no permite esta operación o capacidad.":
+    "The ChatGPT plan does not allow this operation or capability.",
+  "El uso de ChatGPT no está disponible temporalmente. Reintenta más tarde.":
+    "ChatGPT usage is temporarily unavailable. Try again later.",
+  "Host no permitido": "Host not allowed",
+  "Origen no permitido": "Origin not allowed",
+  "Solicitud externa no permitida": "Cross-site request not allowed",
+  "La operación entra en conflicto con un trabajo o relación existente":
+    "The operation conflicts with an existing job or relationship",
+  "Códigos de requisitos duplicados": "Duplicate requirement codes",
+  "El texto no puede superar {count} caracteres.":
+    "Text cannot exceed {count} characters.",
+  "La solicitud no es válida. Revisa los datos e inténtalo de nuevo.":
+    "The request is invalid. Check the data and try again.",
+  "Usuario local": "Local user",
 } as const;

@@ -1,3 +1,4 @@
+import { LocalizedForm } from "./localized-form";
 import { t, useI18n, translateMessage } from "../lib/i18n";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -129,7 +130,7 @@ export function CriterionActions({
           { revision: base.revision },
         )}
       >
-        <form
+        <LocalizedForm
           className="form-stack"
           onSubmit={(e) => {
             e.preventDefault();
@@ -261,7 +262,7 @@ export function CriterionActions({
                     : t("Confirmar validación")}
             </Button>
           </div>
-        </form>
+        </LocalizedForm>
       </Dialog>
     </>
   );

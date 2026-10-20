@@ -1,3 +1,4 @@
+import { LocalizedForm } from "../components/localized-form";
 import { t, useI18n, countLabel, number } from "../lib/i18n";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -47,9 +48,15 @@ import type {
 import { RequirementTable } from "./requirements";
 
 const projectSchema = z.object({
-  name: z.string().trim().min(1, "Escribe un nombre").max(200),
-  description: z.string().max(10000),
-  context: z.string().max(30000),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Escribe un nombre")
+    .max(200, "El texto no puede superar 200 caracteres."),
+  description: z
+    .string()
+    .max(10000, "El texto no puede superar 10000 caracteres."),
+  context: z.string().max(30000, "El texto no puede superar 30000 caracteres."),
   glossary_text: z.string(),
 });
 type ProjectForm = z.infer<typeof projectSchema>;
@@ -115,7 +122,7 @@ export function ProjectEditor({ project }: { project?: Project }) {
           "El contexto y el glosario acompañarán únicamente los análisis que autorices.",
         )}
       >
-        <form
+        <LocalizedForm
           onSubmit={form.handleSubmit(
             (v) => void action.run(() => submit(v), t("Proyecto guardado")),
           )}
@@ -130,10 +137,16 @@ export function ProjectEditor({ project }: { project?: Project }) {
               placeholder={t("Ej. Portal de solicitudes")}
             />
           </TextField>
-          <TextField label={t("Descripción")}>
+          <TextField
+            label={t("Descripción")}
+            error={form.formState.errors.description?.message}
+          >
             <textarea {...form.register("description")} rows={2} />
           </TextField>
-          <TextField label={t("Contexto de negocio")}>
+          <TextField
+            label={t("Contexto de negocio")}
+            error={form.formState.errors.context?.message}
+          >
             <textarea
               {...form.register("context")}
               rows={3}
@@ -148,7 +161,7 @@ export function ProjectEditor({ project }: { project?: Project }) {
             />
           </TextField>
           <Button disabled={action.busy}>{t("Guardar proyecto")}</Button>
-        </form>
+        </LocalizedForm>
       </Dialog>
     </>
   );
@@ -583,7 +596,11 @@ export function ProjectDetail() {
 
 const meetingSchema = z.object({
   project_id: z.string().min(1, "Selecciona un proyecto"),
-  title: z.string().trim().min(1, "Escribe un título").max(200),
+  title: z
+    .string()
+    .trim()
+    .min(1, "Escribe un título")
+    .max(200, "El texto no puede superar 200 caracteres."),
   date: z.string().min(1, "Indica la fecha"),
   profile: z.enum(["economy", "balanced", "quality"]),
   language: z.string(),
@@ -644,7 +661,7 @@ export function NewMeeting() {
         )}
       />
       <div className="new-meeting-grid">
-        <form
+        <LocalizedForm
           className="panel padded form-stack"
           onSubmit={form.handleSubmit(
             (v) => void action.run(() => submit(v), t("Grabación cargada")),
@@ -679,7 +696,10 @@ export function NewMeeting() {
                 placeholder={t("Ej. Descubrimiento del portal")}
               />
             </TextField>
-            <TextField label={t("Fecha")}>
+            <TextField
+              label={t("Fecha")}
+              error={form.formState.errors.date?.message}
+            >
               <input type="date" {...form.register("date")} />
             </TextField>
           </div>
@@ -749,7 +769,7 @@ export function NewMeeting() {
               : t("Guardar reunión")}
             <ArrowRight size={17} />
           </Button>
-        </form>
+        </LocalizedForm>
         <aside className="guide-card">
           <span className="round-icon">
             <Waves size={23} />

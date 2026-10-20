@@ -35,7 +35,7 @@ import {
   useData,
 } from "../components/shared";
 import { api, patch, post, remove } from "../lib/api";
-import { bytes, date, label, time } from "../lib/utils";
+import { bytes, date, label, time, actorLabel } from "../lib/utils";
 import type {
   Analysis,
   AnalysisInput,
@@ -67,7 +67,9 @@ function JobCard({ job }: { job: Job }) {
           <h3>
             {job.kind === "transcribe"
               ? t("Transcripción local")
-              : t("Análisis de requisitos")}
+              : job.kind === "validate_upload"
+                ? t("Validando grabación")
+                : t("Análisis de requisitos")}
           </h3>
           <p>
             {label(job.stage)}{" "}
@@ -1033,10 +1035,7 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
                         {index + 1} · {revision.created_at}
                       </p>
                       <p>{revision.observations}</p>
-                      <p>
-                        {revision.actor?.label ??
-                          t("Registro anterior sin identidad verificada")}
-                      </p>
+                      <p>{actorLabel(revision.actor)}</p>
                       <p>
                         {t("Estado anterior:")}{" "}
                         {criterionStatus(revision.before.status)}
