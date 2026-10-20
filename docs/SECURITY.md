@@ -4,6 +4,8 @@
 
 The local edition is designed for a single owner and is exposed only on localhost through Docker Compose. It does not require a Meeting Requirements AI account, subscription, or hosted server. Do not expose its port directly to the Internet.
 
+The local origin checks and CORS policy share an explicit allowlist: `127.0.0.1` and `localhost` on the configured scheme and port. No wildcard origins or other ports are allowed. Cross-site write requests remain blocked. Hosted deployments retain their configured origin and independent identity/CSRF checks. OAuth always starts from the installation’s canonical host so its callback receives the browser-bound cookie.
+
 ## Authentication and credentials
 
 ChatGPT tokens belong to this installation and are stored in its private authentication volume with `0600` file permissions. The application does not read host credentials, mount user credential directories or the Docker socket, or automatically fall back to API keys. A new installation must connect its own account and confirm its usage controls.

@@ -37,7 +37,7 @@ docker compose ps
 docker compose logs -f
 ```
 
-Open exactly `http://127.0.0.1:8080`. Use that address for OAuth too; `localhost` is a different cookie host and does not replace the registered callback. If you change APP_PORT, recreate the services and use the new port.
+Open `http://127.0.0.1:8080` or `http://localhost:8080`. Both local names are accepted on the configured APP_PORT; other ports and external origins are rejected. OAuth uses the installation’s canonical address (`127.0.0.1` by default), because browser cookies are bound to their host. Starting a connection from the alternate local name first moves to the canonical Settings page; select Connect with ChatGPT or Another account there to continue. The registered callback URI is unchanged. If you change APP_PORT, recreate the services and use the new port.
 
 The initialize service prepares volumes with UID/GID 10001 and runs Alembic after dropping root privileges. Main processes run as non-root users. A migration error prevents the API/worker from starting; retain the data and review logs before retrying.
 

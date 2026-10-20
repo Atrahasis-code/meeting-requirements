@@ -24,7 +24,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.public_url],
+    allow_origins=settings.browser_origins,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
     allow_credentials=True,
@@ -66,7 +66,7 @@ async def local_security(request: Request, call_next):
     if host not in allowed:
         return JSONResponse({"detail": "Host no permitido"}, 400)
     origin = request.headers.get("origin")
-    if request.method in {"POST", "PATCH", "DELETE"} and origin and origin != settings.public_url:
+    if request.method in {"POST", "PATCH", "DELETE"} and origin and origin not in settings.browser_origins:
         return JSONResponse({"detail": "Origen no permitido"}, 403)
     if (
         request.method in {"POST", "PATCH", "DELETE"}
@@ -715,6 +715,11 @@ def connect(request: Request):
 
 
 def connect_response(request: Request, *, new_account=False):
+    # OAuth callback cookies must remain on the installation's canonical host.
+    # Do not start PKCE on an alias that cannot send that cookie on callback.
+    origin = request.headers.get("origin")
+    if origin in settings.browser_origins and origin != settings.browser_origins[0]:
+        return JSONResponse({"redirect": settings.public_url.rstrip("/") + "/settings?connection=canonical"})
     browser = request.cookies.get("mra_browser") or secrets.token_urlsafe(40)
     response = JSONResponse({"redirect": auth.begin(browser, new_account=new_account)})
     response.set_cookie("mra_browser", browser, httponly=True, samesite="lax", max_age=86400)

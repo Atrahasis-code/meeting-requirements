@@ -46,6 +46,13 @@ export function SettingsPage() {
           "Rendimiento local, conexión y consumo bajo tu control.",
         )}
       />
+      {params.get("connection") === "canonical" && (
+        <div className="notice" role="status">
+          {t(
+            "Ya estás en la dirección de conexión OAuth. Pulsa Conectar con ChatGPT u Otra cuenta para continuar.",
+          )}
+        </div>
+      )}
       {params.get("connection") === "failed" && (
         <div className="error-box" role="alert">
           {t(

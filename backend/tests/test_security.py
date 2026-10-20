@@ -323,3 +323,82 @@ def test_large_input_does_not_generate_an_unsupported_enum_schema(count):
     data = {"segments": [{"id": str(UUID(int=i))} for i in range(count)]}
     schema = analysis_output_schema(data)
     assert "enum" not in schema["$defs"]["Evidence"]["properties"]["segment_id"]
+
+
+@pytest.mark.parametrize("hostname", ["127.0.0.1", "localhost"])
+def test_loopback_browser_can_write_with_credentialed_cors(client, hostname):
+    origin = f"http://{hostname}:8080"
+    headers = {"origin": origin, "host": f"{hostname}:8080", "sec-fetch-site": "same-origin"}
+    preflight = client.options(
+        "/api/projects",
+        headers={
+            **headers,
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "content-type",
+        },
+    )
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == origin
+    assert preflight.headers["access-control-allow-credentials"] == "true"
+    response = client.post("/api/projects", json={"name": "Loopback fixture"}, headers=headers)
+    assert response.status_code == 201
+    assert response.headers["access-control-allow-origin"] == origin
+    identity = response.json()["id"]
+    assert (
+        client.patch(
+            f"/api/projects/{identity}", json={"name": "Edited fixture"}, headers=headers
+        ).status_code
+        == 200
+    )
+    assert client.delete(f"/api/projects/{identity}?confirm=true", headers=headers).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "https://attacker.invalid",
+        "http://localhost:8081",
+        "https://localhost:8080",
+        "http://localhost.attacker.invalid:8080",
+        "http://127.0.0.2:8080",
+        "null",
+    ],
+)
+def test_loopback_alias_does_not_allow_external_origins_or_other_ports(client, origin):
+    response = client.post("/api/projects", json={"name": "Forbidden fixture"}, headers={"origin": origin})
+    assert response.status_code == 403
+    preflight = client.options(
+        "/api/projects", headers={"origin": origin, "access-control-request-method": "POST"}
+    )
+    assert preflight.status_code == 400
+    assert "access-control-allow-origin" not in preflight.headers
+
+
+def test_loopback_alias_keeps_cross_site_protection(client):
+    assert (
+        client.post(
+            "/api/projects",
+            json={"name": "Forbidden fixture"},
+            headers={
+                "origin": "http://localhost:8080",
+                "sec-fetch-site": "cross-site",
+            },
+        ).status_code
+        == 403
+    )
+
+
+def test_configured_port_and_hosted_origins_remain_explicit():
+    from app.config import Settings
+
+    assert Settings(public_url="http://127.0.0.1:18080").browser_origins == [
+        "http://127.0.0.1:18080",
+        "http://localhost:18080",
+    ]
+    assert Settings(public_url="http://localhost:18080/").browser_origins == [
+        "http://localhost:18080",
+        "http://127.0.0.1:18080",
+    ]
+    assert Settings(public_url="https://preview.example.invalid").browser_origins == [
+        "https://preview.example.invalid",
+    ]

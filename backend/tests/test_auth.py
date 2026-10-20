@@ -1,4 +1,5 @@
 import time
+from unittest.mock import Mock
 from urllib.parse import parse_qs, urlparse
 import pytest
 from app import auth
@@ -249,3 +250,14 @@ def test_revoked_refresh_requires_new_connection_and_keeps_no_tokens(monkeypatch
     assert auth.status()["connected"] is False
     with auth.credentials() as data:
         assert not {"access_token", "refresh_token", "id_token"} & data["profiles"]["profile"].keys()
+
+
+def test_alias_moves_to_canonical_host_before_creating_oauth_state(client, monkeypatch):
+    begin = Mock()
+    monkeypatch.setattr(auth, "begin", begin)
+    for path in ["/api/auth/chatgpt/start", "/api/auth/chatgpt/add-account"]:
+        response = client.post(path, headers={"origin": "http://localhost:8080", "host": "localhost:8080"})
+        assert response.status_code == 200
+        assert response.json() == {"redirect": "http://127.0.0.1:8080/settings?connection=canonical"}
+        assert "set-cookie" not in response.headers
+    begin.assert_not_called()

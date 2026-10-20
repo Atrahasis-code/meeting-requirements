@@ -645,4 +645,6 @@ export const english = {
   "La solicitud no es válida. Revisa los datos e inténtalo de nuevo.":
     "The request is invalid. Check the data and try again.",
   "Usuario local": "Local user",
+  "Ya estás en la dirección de conexión OAuth. Pulsa Conectar con ChatGPT u Otra cuenta para continuar.":
+    "You are now at the OAuth connection address. Select Connect with ChatGPT or Another account to continue.",
 } as const;

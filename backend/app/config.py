@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlsplit
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +34,31 @@ class Settings(BaseSettings):
                 .render_as_string(hide_password=False)
             )
         return connection
+
+    @property
+    def browser_origins(self) -> list[str]:
+        url = urlsplit(self.public_url)
+        host = url.hostname
+        if (
+            url.scheme not in {"http", "https"}
+            or not host
+            or url.username is not None
+            or url.password is not None
+            or url.path not in {"", "/"}
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError("MRA_PUBLIC_URL must be an HTTP(S) origin")
+        port = url.port
+        suffix = f":{port}" if port and port != {"http": 80, "https": 443}[url.scheme] else ""
+        rendered_host = f"[{host}]" if ":" in host else host
+        origins = [f"{url.scheme}://{rendered_host}{suffix}"]
+        # Only the two explicit IPv4 loopback names share local access. Keep
+        # scheme/port exact; hosted domains never gain localhost aliases.
+        if host in {"127.0.0.1", "localhost"}:
+            alias = "localhost" if host == "127.0.0.1" else "127.0.0.1"
+            origins.append(f"{url.scheme}://{alias}{suffix}")
+        return origins
 
     @property
     def callback_url(self) -> str:
