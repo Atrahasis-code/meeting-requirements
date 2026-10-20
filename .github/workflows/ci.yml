@@ -1,0 +1,62 @@
+name: Docker Compose tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Only checkout receives GitHub's temporary read token. No provider secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local:
+    name: Local / ${{ matrix.database }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+    env:
+      CI: "true"
+      COMPOSE_ANSI: never
+      BUILDKIT_PROGRESS: plain
+      MRA_TEST_PROJECT: meeting-ai-test-ci
+    steps:
+      - name: Check out source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Verify Docker Compose
+        run: |
+          docker version
+          docker compose version
+          docker compose -p meeting-ai-test-ci -f compose.yaml -f compose.test.yaml config --quiet
+      - name: Run SQLite, frontend, and localhost integration tests
+        if: matrix.database == 'sqlite'
+        run: sh scripts/test.sh
+      - name: Run PostgreSQL and localhost integration tests
+        if: matrix.database == 'postgres'
+        run: sh scripts/test-postgres.sh
+      - name: Stop isolated test services
+        if: always()
+        env:
+          DATABASE: ${{ matrix.database }}
+        run: |
+          case "$DATABASE" in
+            sqlite)
+              docker compose -p meeting-ai-test-ci -f compose.yaml -f compose.test.yaml down
+              ;;
+            postgres)
+              docker compose -p meeting-ai-pg-test -f compose.yaml -f compose.test.yaml -f compose.postgres.test.yaml down
+              ;;
+          esac

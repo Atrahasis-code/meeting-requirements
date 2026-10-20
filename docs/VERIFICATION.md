@@ -53,3 +53,11 @@ docker compose -p meeting-ai-test-localhost -f compose.yaml -f compose.test.yaml
 The PostgreSQL test script uses the same proxy-based integration after its database checks.
 
 This regression delivery passed three HTTP integration cases through the master compatibility entrypoint and the independent community tree. The community script also passed 61 backend tests (eight expected integration/PostgreSQL skips), Ruff, and 26 React tests. PostgreSQL passed its 11 workflow/migration tests and the same three proxy integration cases. The normal installation remained running, with DEMO hashes checked separately.
+
+## GitHub Actions
+
+`.github/workflows/ci.yml` runs on every repository push and on pull requests, with a manual dispatch option. The SQLite job runs `sh scripts/test.sh` (backend, React, Ruff and full localhost integration); the PostgreSQL job runs `sh scripts/test-postgres.sh`. Both jobs use fresh GitHub-hosted Ubuntu runners, isolated Compose projects, synthetic audio, Mock analysis/transcription and no published test ports. They do not use self-hosted runners, application credentials, saved models, DEMO volumes or deployment environments. Builds still download the pinned public images and dependencies.
+
+The workflow grants only `contents: read` for GitHub's temporary checkout token and disables persisted checkout credentials. It references no repository secrets, API/OAuth keys, cloud services or real-provider test switches. Checkout is fixed to a full commit SHA; pull requests use the ordinary `pull_request` event. Older runs on the same event/ref are cancelled, each job has a timeout, and cleanup preserves test volumes. CI does not deploy, publish packages or upload application data. Fork contributions may require GitHub's normal maintainer approval before running.
+
+The workflow becomes active when its commit is pushed to GitHub. Local Compose results and workflow linting do not establish a successful GitHub-hosted run; inspect the repository's Actions tab after publication. No repository secrets need to be configured.

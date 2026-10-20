@@ -3,6 +3,7 @@
   "files": {
     ".dockerignore": "5b79fd3f641b6b3c33e4ed35c7b50760c71b4257c23b4c34633f268a15db1636",
     ".env.example": "873d27b0acfbac1aca9e3ae6a16cf550e0b9e120b4e75ac3121df16aadb3eafa",
+    ".github/workflows/ci.yml": "4c325881e492fffae8269306f9187796edcfc0e4997fb9990db252ca09ec3bd5",
     ".gitignore": "469ffd4b288714eb159dafffce2e6a96cc2bf638b5ffe432ae334e784e902677",
     "AGENTS.md": "4bca81c44bad1a955982793a7118c6758e717231a061e6d79e7d9017dcfdff36",
     "LICENSE": "f42721db8002cca3548f5c9e50010ff5de7d9febd9942352f9b0a0d559941f79",
@@ -66,7 +67,7 @@
     "docs/POSTGRESQL.md": "19c85ddd0cb74f4371028fa32168365b4f20fe4c8cc1cb76fa703f4af92d4ec7",
     "docs/PROVIDERS.md": "05734bb82a5dd9a1c0d1f537ab91cf45d5ed952eeddf9d86d034213f8c8fde2b",
     "docs/SECURITY.md": "5dee662dd04bf0c4c490a8b38fb926426eadd2d1301605e62d434b067d6de335",
-    "docs/VERIFICATION.md": "c4614268fab577ba8a103d629651865d1549dc70b5559dc4f972dd97190be46e",
+    "docs/VERIFICATION.md": "96672b8163ff0ebb3e6318a83fbddd807a311a0078b8242aee38fd4361a2006b",
     "docs/assets/workspace.png": "d4541c2dace1dd3a2fdb9eee0ae952c51363c02d9bb707d9ccb05565a011c6de",
     "frontend/Dockerfile": "a6ab559de481ae2b1d86c510e995918668f47fd1371195a1b1e8d2dde639c27f",
     "frontend/components.json": "3b706b67c8f468da5e836c8a29a2a6fc342e9bf1979141851afc76442fae5cd8",
