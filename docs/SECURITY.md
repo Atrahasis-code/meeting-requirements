@@ -1,15 +1,31 @@
-# Seguridad y privacidad de la edición local
+# Security and privacy
 
-La edición local es para una persona y se expone únicamente en localhost mediante Docker Compose. No tiene cuentas comerciales, suscripciones ni dependencia de un servidor Meeting Requirements AI. No publiques su puerto directamente en Internet.
+## Deployment scope
 
-Los tokens de ChatGPT pertenecen a esta instalación y se conservan en el volumen privado de autenticación con permisos 0600. No se leen credenciales del anfitrión, no se montan directorios del usuario ni el socket Docker y no hay alternativa automática con API keys. Una instalación nueva debe conectar su propia cuenta y confirmar los controles de consumo.
+The local edition is designed for a single owner and is exposed only on localhost through Docker Compose. It does not require a Meeting Requirements AI account, subscription, or hosted server. Do not expose its port directly to the Internet.
 
-La transcripción usa CPU e INT8. Solo se envía al proveedor el texto autorizado explícitamente para cada análisis. Los originales, citas y versiones se conservan en la base local. Los análisis y sus exportaciones no equivalen a una aprobación humana.
+## Authentication and credentials
 
-La aplicación se comunica con OpenAI al conectar, renovar, consultar modelos o analizar con consentimiento, y con los repositorios de modelos al descargar un perfil solicitado. Docker y los instaladores descargan las imágenes y dependencias fijadas durante la construcción. No hay telemetría propia ni peticiones de licencia o de suscripción.
+ChatGPT tokens belong to this installation and are stored in its private authentication volume with `0600` file permissions. The application does not read host credentials, mount user credential directories or the Docker socket, or automatically fall back to API keys. A new installation must connect its own account and confirm its usage controls.
 
-La transcripción y el resultado del modelo son datos no confiables: no habilitan comandos, conectores, navegación, lectura de archivos ni delegación. Las salidas se validan con esquema, citas y referencias; los campos se renderizan como texto. Esto limita capacidades y exposición, pero no constituye una garantía de detección perfecta de prompt injection.
+## Data processing and external connections
 
-Las rutas de archivos, contenidos multimedia y tamaños se validan. Los contenedores principales no son root; mantienen límites de recursos. La base y los backups contienen información sensible: protege el equipo, sus discos y las copias. No guardes tokens ni grabaciones en Git. Un archivo grabado nunca empieza a transcribirse automáticamente.
+Transcription runs on the CPU using INT8. Only the text explicitly authorized for each analysis is sent to the analysis provider. Original text, citations, and analysis versions are retained in the local database. An analysis or export does not constitute human approval.
 
-Para informar de una vulnerabilidad, utiliza el canal privado de seguridad del repositorio cuando esté habilitado. Evita adjuntar secretos, grabaciones o transcripciones a incidencias públicas.
+The application contacts OpenAI when connecting an account, refreshing authentication, fetching models, or running an authorized analysis. It contacts model repositories when downloading a requested transcription model. Docker and package installers download pinned images and dependencies during builds. The application has no first-party telemetry, license checks, or subscription requests.
+
+## Untrusted content
+
+Transcripts and model output are treated as untrusted data. They cannot authorize command execution, connectors, browsing, file access, or delegation. Output is checked against schemas, citations, and references; fields are rendered as text. These boundaries limit capabilities and exposure but do not guarantee perfect detection of prompt injection.
+
+## Files, containers, and backups
+
+File paths, media contents, and upload sizes are validated. Main application containers run as non-root users with resource limits. Recordings never start transcribing automatically.
+
+The database and backups contain sensitive information. Protect the host, its disks, and its backups. Never commit tokens or recordings to Git. See the [operations guide](OPERATIONS.md) for backup and restoration procedures.
+
+## Reporting a vulnerability
+
+Use the repository's private security reporting channel when it is available. Do not attach secrets, recordings, or transcripts to public issues.
+
+If no private reporting channel is listed, ask the maintainer how to report privately without disclosing vulnerability details or sensitive data in public.
