@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      target: test
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    environment:
+      MRA_TEST_MODE: "true"
+      MRA_ANALYSIS_PROVIDER: mock
+      MRA_TRANSCRIPTION_PROVIDER: mock
+  worker:
+    build:
+      target: test
+    command: ["python", "-m", "app.worker"]
+    environment:
+      MRA_TEST_MODE: "true"
+      MRA_ANALYSIS_PROVIDER: mock
+      MRA_TRANSCRIPTION_PROVIDER: mock
+  integration-tests:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: test
+    environment:
+      MRA_TEST_BASE_URL: http://backend:8000
+      MRA_TEST_MODE: "true"
+    command: ["pytest", "tests/test_http_flow.py", "-q"]
+    depends_on:
+      backend:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    restart: "no"
+  frontend-tests:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: test
+    command: ["npm", "test"]
+    restart: "no"

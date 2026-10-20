@@ -1,0 +1,129 @@
+name: meeting-requirements-ai
+x-environment: &environment
+  TMPDIR: /data/media/.incoming
+  HF_HOME: /data/models/huggingface
+  HF_HUB_CACHE: /data/models/hub
+  HF_XET_CACHE: /data/models/xet
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  XDG_CACHE_HOME: /data/models/.cache
+  MRA_DATA_ROOT: /data
+  MRA_PUBLIC_URL: http://127.0.0.1:${APP_PORT:-8080}
+  MRA_MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-4294967296}
+  MRA_ANALYSIS_PROVIDER: chatgpt
+  MRA_CPU_THREADS: ${WORKER_THREADS:-3}
+  MRA_PROVIDER_TIMEOUT_SECONDS: ${ANALYSIS_TIMEOUT_SECONDS:-600}
+x-volumes: &volumes
+  - database:/data/db
+  - media:/data/media
+  - transcripts:/data/transcripts
+  - exports:/data/exports
+  - models:/data/models
+  - authentication:/data/auth
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+x-runtime: &runtime
+  init: true
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp:rw,nosuid,nodev,size=536870912"]
+  logging: *logging
+  environment: *environment
+  volumes: *volumes
+services:
+  initialize:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runtime
+    user: "0:0"
+    command: ["python", "-m", "app.initialize"]
+    restart: "no"
+    cpus: ${INIT_CPUS:-0.5}
+    mem_limit: ${INIT_MEM_LIMIT:-256m}
+    environment: *environment
+    volumes: *volumes
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+  backend:
+    <<: *runtime
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runtime
+    cpus: ${BACKEND_CPUS:-0.5}
+    mem_limit: ${BACKEND_MEM_LIMIT:-512m}
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  worker:
+    <<: *runtime
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+      target: runtime
+    cpus: ${WORKER_CPUS:-3.0}
+    mem_limit: ${WORKER_MEM_LIMIT:-3g}
+    stop_grace_period: 60s
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.healthcheck", "worker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: runtime
+    init: true
+    restart: unless-stopped
+    user: "10001:10001"
+    cpus: ${FRONTEND_CPUS:-0.5}
+    mem_limit: ${FRONTEND_MEM_LIMIT:-256m}
+    ports: ["127.0.0.1:${APP_PORT:-8080}:8080"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=33554432"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  maintenance:
+    profiles: [maintenance]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runtime
+    entrypoint: ["python", "-m", "app.maintenance"]
+    environment: *environment
+    volumes: *volumes
+    restart: "no"
+    cpus: 1
+    mem_limit: 512m
+volumes:
+  database:
+  media:
+  transcripts:
+  exports:
+  models:
+  authentication:

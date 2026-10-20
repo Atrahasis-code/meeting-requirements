@@ -1,0 +1,729 @@
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  FileCheck2,
+  FolderKanban,
+  Plus,
+  Search,
+  UploadCloud,
+  Video,
+  Waves,
+  Pencil,
+  Clock3,
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Dialog } from "../components/ui/dialog";
+import {
+  Badge,
+  ConfirmDelete,
+  Empty,
+  Loading,
+  PageHeader,
+  SectionTitle,
+  TextField,
+  useAction,
+  useData,
+} from "../components/shared";
+import { api, patch, post, remove } from "../lib/api";
+import { bytes, date, label, time } from "../lib/utils";
+import type {
+  DashboardData,
+  Meeting,
+  Preferences,
+  Project,
+  Requirement,
+} from "../types";
+import { RequirementTable } from "./requirements";
+
+const projectSchema = z.object({
+  name: z.string().trim().min(1, "Escribe un nombre").max(200),
+  description: z.string().max(10000),
+  context: z.string().max(30000),
+  glossary_text: z.string(),
+});
+type ProjectForm = z.infer<typeof projectSchema>;
+export function ProjectEditor({ project }: { project?: Project }) {
+  const [open, setOpen] = useState(false);
+  const action = useAction();
+  const navigate = useNavigate();
+  const form = useForm<ProjectForm>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: {
+      name: project?.name ?? "",
+      description: project?.description ?? "",
+      context: project?.context ?? "",
+      glossary_text: Object.entries(project?.glossary ?? {})
+        .map(([k, v]) => `${k} = ${v}`)
+        .join("\n"),
+    },
+  });
+  async function submit(values: ProjectForm) {
+    const glossary: Record<string, string> = {};
+    for (const line of values.glossary_text
+      .split("\n")
+      .filter((x) => x.trim())) {
+      const separator = line.indexOf("=");
+      if (separator < 1)
+        throw new Error(
+          "Usa un término = definición por línea en el glosario.",
+        );
+      glossary[line.slice(0, separator).trim()] = line
+        .slice(separator + 1)
+        .trim();
+    }
+    const body = {
+      name: values.name,
+      description: values.description,
+      context: values.context,
+      glossary,
+    };
+    const result = project
+      ? await patch<Project>("/projects/" + project.id, body)
+      : await post<Project>("/projects", body);
+    setOpen(false);
+    navigate("/projects/" + result.id);
+    return result;
+  }
+  return (
+    <>
+      <Button
+        variant={project ? "outline" : "default"}
+        onClick={() => setOpen(true)}
+      >
+        {project ? <Pencil size={16} /> : <Plus size={16} />}{" "}
+        {project ? "Editar proyecto" : "Nuevo proyecto"}
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={project ? "Editar proyecto" : "Un espacio para tus requisitos"}
+        description="El contexto y el glosario acompañarán únicamente los análisis que autorices."
+      >
+        <form
+          onSubmit={form.handleSubmit(
+            (v) => void action.run(() => submit(v), "Proyecto guardado"),
+          )}
+          className="form-stack"
+        >
+          <TextField
+            label="Nombre del proyecto"
+            error={form.formState.errors.name?.message}
+          >
+            <input
+              {...form.register("name")}
+              placeholder="Ej. Portal de solicitudes"
+            />
+          </TextField>
+          <TextField label="Descripción">
+            <textarea {...form.register("description")} rows={2} />
+          </TextField>
+          <TextField label="Contexto de negocio">
+            <textarea
+              {...form.register("context")}
+              rows={3}
+              placeholder="Objetivos, alcance y conocimientos relevantes…"
+            />
+          </TextField>
+          <TextField label="Glosario · término = definición">
+            <textarea
+              {...form.register("glossary_text")}
+              rows={3}
+              placeholder="CRM = Gestión de relaciones con clientes"
+            />
+          </TextField>
+          <Button disabled={action.busy}>Guardar proyecto</Button>
+        </form>
+      </Dialog>
+    </>
+  );
+}
+
+export function Dashboard() {
+  const query = useData<DashboardData>("/dashboard", true);
+  if (!query.data) return <Loading error={query.error} />;
+  const data = query.data;
+  return (
+    <>
+      <PageHeader
+        eyebrow="TU ESPACIO DE TRABAJO"
+        title="Cada reunión, un paso adelante."
+        description="Transforma conversaciones en requisitos claros, revisables y conectados con su origen."
+      />
+      <section className="overview-grid">
+        <div className="intro-card">
+          <div className="eyebrow">DE LA VOZ A LA ACCIÓN</div>
+          <h2>
+            Las buenas ideas
+            <br />
+            merecen un buen registro.
+          </h2>
+          <p>
+            Sube una grabación. Revisa lo que se dijo.
+            <br />
+            Construye una especificación con evidencia.
+          </p>
+          <Button asChild>
+            <Link to="/meetings/new">
+              Procesar una reunión <ArrowUpRight size={17} />
+            </Link>
+          </Button>
+          <div className="intro-wave">
+            <Waves size={160} strokeWidth={0.7} />
+          </div>
+          <span className="intro-caption">
+            LOCAL POR DISEÑO. HUMANO POR DECISIÓN.
+          </span>
+        </div>
+        <div className="stats-grid">
+          {[
+            [
+              FolderKanban,
+              data.project_count,
+              "Proyectos activos",
+              "Contexto que se conserva",
+            ],
+            [
+              Video,
+              data.meeting_count,
+              "Reuniones registradas",
+              "Tu historial de conversaciones",
+            ],
+            [
+              FileCheck2,
+              data.pending_requirements,
+              "Por validar",
+              "Tu criterio cierra el ciclo",
+            ],
+            [
+              Clock3,
+              data.jobs.length,
+              "Trabajos pendientes",
+              "Procesamiento secuencial",
+            ],
+          ].map(([Icon, count, title, caption]) => {
+            const I = Icon as typeof Video;
+            return (
+              <div className="stat-card" key={String(title)}>
+                <I size={20} />
+                <strong>{String(count)}</strong>
+                <span>{String(title)}</span>
+                <small>{String(caption)}</small>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+      <SectionTitle title="Proyectos recientes" to="/projects" />
+      {data.projects.length ? (
+        <div className="project-grid">
+          {data.projects.map((p) => (
+            <ProjectCard key={p.id} project={p} />
+          ))}
+        </div>
+      ) : (
+        <div className="panel">
+          <Empty
+            title="El primer proyecto empieza aquí"
+            description="Agrupa reuniones, contexto de negocio y requisitos en un mismo lugar."
+            action={<ProjectEditor />}
+          />
+        </div>
+      )}
+      <SectionTitle title="En tu mesa de trabajo" to="/meetings" />
+      {data.jobs.length ? (
+        <div className="panel">
+          {data.jobs.map((job) => (
+            <Link
+              className="job-row"
+              to={"/meetings/" + job.meeting_id}
+              key={job.id}
+            >
+              <span className="round-icon">
+                <Waves size={19} />
+              </span>
+              <div>
+                <strong>
+                  {job.kind === "transcribe"
+                    ? "Transcripción local"
+                    : "Análisis de requisitos"}
+                </strong>
+                <small>{label(job.stage)}</small>
+              </div>
+              <Badge value={job.status} />
+              <ArrowRight size={17} />
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="quiet-row">
+          <span className="status-dot online" />
+          Todo en orden. No hay trabajos en cola.
+          <span>El procesamiento comienza cuando tú lo decides.</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ProjectCard({ project }: { project: Project }) {
+  return (
+    <Link to={"/projects/" + project.id} className="project-card">
+      <div className="project-card-top">
+        <span className="project-icon">
+          <FolderKanban size={21} />
+        </span>
+        <ArrowUpRight size={18} />
+      </div>
+      <h3>{project.name}</h3>
+      <p>
+        {project.description ||
+          "Un nuevo espacio para organizar decisiones y requisitos."}
+      </p>
+      <div className="project-card-footer">
+        <span>{Object.keys(project.glossary).length} términos en glosario</span>
+        <span>{date(project.updated_at)}</span>
+      </div>
+    </Link>
+  );
+}
+
+export function Projects() {
+  const query = useData<Project[]>("/projects");
+  const [search, setSearch] = useState("");
+  return (
+    <>
+      <PageHeader
+        eyebrow="ORGANIZACIÓN"
+        title="Proyectos"
+        description="El contexto de cada producto, reunido en un solo lugar."
+        actions={<ProjectEditor />}
+      />
+      <div className="toolbar">
+        <div className="search-field">
+          <Search size={17} />
+          <input
+            aria-label="Buscar proyecto"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar un proyecto…"
+          />
+        </div>
+        <span className="muted">{query.data?.length ?? 0} proyectos</span>
+      </div>
+      {!query.data ? (
+        <Loading error={query.error} />
+      ) : query.data.length ? (
+        <div className="project-grid">
+          {query.data
+            .filter((p) =>
+              (p.name + " " + p.description)
+                .toLowerCase()
+                .includes(search.toLowerCase()),
+            )
+            .map((p) => (
+              <ProjectCard key={p.id} project={p} />
+            ))}
+        </div>
+      ) : (
+        <Empty
+          title="Dale contexto a tus reuniones"
+          description="Crea un proyecto para comenzar."
+          action={<ProjectEditor />}
+        />
+      )}
+    </>
+  );
+}
+
+export function MeetingTable({ meetings }: { meetings: Meeting[] }) {
+  return (
+    <div className="panel table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>REUNIÓN</th>
+            <th>FECHA</th>
+            <th>GRABACIÓN</th>
+            <th>ESTADO</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {meetings.map((meeting) => (
+            <tr key={meeting.id}>
+              <td>
+                <Link className="table-title" to={"/meetings/" + meeting.id}>
+                  <span className="round-icon">
+                    <Video size={17} />
+                  </span>
+                  {meeting.title}
+                </Link>
+              </td>
+              <td>{date(meeting.date)}</td>
+              <td>
+                {meeting.media ? (
+                  <>
+                    <span>{time(meeting.media.duration)}</span>
+                    <small>{bytes(meeting.media.size)}</small>
+                  </>
+                ) : (
+                  "Sin archivo"
+                )}
+              </td>
+              <td>
+                <Badge value={meeting.status} />
+              </td>
+              <td>
+                <Link
+                  className="icon-button"
+                  aria-label={"Abrir " + meeting.title}
+                  to={"/meetings/" + meeting.id}
+                >
+                  <ArrowUpRight size={18} />
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function Meetings() {
+  const query = useData<Meeting[]>("/meetings", true);
+  const [search, setSearch] = useState("");
+  return (
+    <>
+      <PageHeader
+        eyebrow="CONVERSACIONES"
+        title="Reuniones"
+        description="Del archivo original a decisiones que puedes rastrear."
+        actions={
+          <Button asChild>
+            <Link to="/meetings/new">
+              <Plus size={16} />
+              Nueva reunión
+            </Link>
+          </Button>
+        }
+      />
+      <div className="toolbar">
+        <div className="search-field">
+          <Search size={17} />
+          <input
+            aria-label="Buscar reunión"
+            placeholder="Buscar una reunión…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+      {!query.data ? (
+        <Loading error={query.error} />
+      ) : query.data.length ? (
+        <MeetingTable
+          meetings={query.data.filter((m) =>
+            m.title.toLowerCase().includes(search.toLowerCase()),
+          )}
+        />
+      ) : (
+        <Empty
+          title="Tu próxima conversación empieza aquí"
+          description="Registra una reunión y selecciona una grabación para procesar."
+          action={
+            <Button asChild>
+              <Link to="/meetings/new">Nueva reunión</Link>
+            </Button>
+          }
+        />
+      )}
+    </>
+  );
+}
+
+export function ProjectDetail() {
+  const { id } = useParams();
+  const query = useData<Project>("/projects/" + id);
+  const meetings = useData<Meeting[]>("/meetings?project_id=" + id, true);
+  const requirements = useData<Requirement[]>(
+    "/projects/" + id + "/requirements",
+  );
+  const [tab, setTab] = useState("meetings");
+  const navigate = useNavigate();
+  if (!query.data) return <Loading error={query.error} />;
+  const project = query.data;
+  return (
+    <>
+      <PageHeader
+        eyebrow="PROYECTOS / DETALLE"
+        title={project.name}
+        description={project.description}
+        actions={
+          <>
+            <ProjectEditor project={project} />
+            <Button asChild>
+              <Link to={"/meetings/new?project=" + id}>
+                <Plus size={16} />
+                Añadir reunión
+              </Link>
+            </Button>
+            <ConfirmDelete
+              title="Eliminar proyecto"
+              description="Se eliminarán todas sus reuniones, requisitos, versiones y archivos. Esta operación no se puede deshacer."
+              onConfirm={async () => {
+                await remove("/projects/" + id + "?confirm=true");
+                navigate("/projects");
+              }}
+            />
+          </>
+        }
+      />
+      <div className="tabs">
+        {[
+          ["meetings", "Reuniones"],
+          ["requirements", "Requisitos"],
+          ["context", "Contexto y glosario"],
+        ].map(([key, title]) => (
+          <button
+            key={key}
+            className={tab === key ? "active" : ""}
+            onClick={() => setTab(key)}
+          >
+            {title}
+          </button>
+        ))}
+      </div>
+      {tab === "meetings" ? (
+        meetings.data?.length ? (
+          <MeetingTable meetings={meetings.data} />
+        ) : (
+          <Empty
+            title="Un proyecto, muchas conversaciones"
+            description="Añade la primera reunión para comenzar a capturar requisitos."
+          />
+        )
+      ) : tab === "requirements" ? (
+        <RequirementTable requirements={requirements.data ?? []} />
+      ) : (
+        <div className="two-columns">
+          <section className="panel padded">
+            <h2>Contexto de negocio</h2>
+            <p className="preserve">
+              {project.context || "Añade contexto desde Editar proyecto."}
+            </p>
+          </section>
+          <section className="panel padded">
+            <h2>Glosario</h2>
+            {Object.entries(project.glossary).map(([term, definition]) => (
+              <div className="glossary-row" key={term}>
+                <strong>{term}</strong>
+                <p>{definition}</p>
+              </div>
+            ))}
+            {!Object.keys(project.glossary).length && (
+              <p className="muted">No hay términos registrados.</p>
+            )}
+          </section>
+        </div>
+      )}
+    </>
+  );
+}
+
+const meetingSchema = z.object({
+  project_id: z.string().min(1, "Selecciona un proyecto"),
+  title: z.string().trim().min(1, "Escribe un título").max(200),
+  date: z.string().min(1, "Indica la fecha"),
+  profile: z.enum(["economy", "balanced", "quality"]),
+  language: z.string(),
+});
+type MeetingForm = z.infer<typeof meetingSchema>;
+export function NewMeeting() {
+  const projects = useData<Project[]>("/projects");
+  const preferences = useData<Preferences>("/settings");
+  const [params] = useSearchParams();
+  const [file, setFile] = useState<File | null>(null);
+  const [draft, setDraft] = useState<string | null>(null);
+  const action = useAction();
+  const navigate = useNavigate();
+  const form = useForm<MeetingForm>({
+    resolver: zodResolver(meetingSchema),
+    defaultValues: {
+      project_id: params.get("project") ?? "",
+      title: "",
+      date: new Date().toLocaleDateString("en-CA"),
+      profile: "balanced",
+      language: "es",
+    },
+  });
+  useEffect(() => {
+    if (preferences.data) {
+      form.setValue(
+        "profile",
+        preferences.data.profile as MeetingForm["profile"],
+      );
+      form.setValue("language", preferences.data.language ?? "auto");
+    }
+  }, [preferences.data, form]);
+  const profile = form.watch("profile");
+  async function submit(values: MeetingForm) {
+    if (!file) throw new Error("Selecciona una grabación.");
+    if (file.size > (preferences.data?.max_upload_bytes ?? 4294967296))
+      throw new Error("El archivo excede el límite configurado.");
+    const meeting = draft
+      ? { id: draft }
+      : await post<Meeting>("/meetings", {
+          ...values,
+          language: values.language === "auto" ? null : values.language,
+        });
+    setDraft(meeting.id);
+    const body = new FormData();
+    body.append("file", file);
+    await api("/meetings/" + meeting.id + "/upload", { method: "POST", body });
+    navigate("/meetings/" + meeting.id);
+    return meeting;
+  }
+  return (
+    <>
+      <PageHeader
+        eyebrow="CAPTURA"
+        title="Una nueva reunión"
+        description="Selecciona la grabación y su contexto. El procesamiento comenzará solo cuando lo indiques."
+      />
+      <div className="new-meeting-grid">
+        <form
+          className="panel padded form-stack"
+          onSubmit={form.handleSubmit(
+            (v) => void action.run(() => submit(v), "Grabación cargada"),
+          )}
+        >
+          <div className="section-number">
+            01 <h2>El contexto</h2>
+          </div>
+          <TextField
+            label="Proyecto"
+            error={form.formState.errors.project_id?.message}
+          >
+            <select {...form.register("project_id")}>
+              <option value="">Seleccionar proyecto</option>
+              {projects.data?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </TextField>
+          {projects.data?.length === 0 && (
+            <Link to="/projects">Crea un proyecto para continuar →</Link>
+          )}
+          <div className="two-columns">
+            <TextField
+              label="Título"
+              error={form.formState.errors.title?.message}
+            >
+              <input
+                {...form.register("title")}
+                placeholder="Ej. Descubrimiento del portal"
+              />
+            </TextField>
+            <TextField label="Fecha">
+              <input type="date" {...form.register("date")} />
+            </TextField>
+          </div>
+          <div className="section-number">
+            02 <h2>La grabación</h2>
+          </div>
+          <label className="upload-zone">
+            <UploadCloud size={31} />
+            <strong>{file ? file.name : "Selecciona una grabación"}</strong>
+            <span>
+              {file
+                ? bytes(file.size)
+                : "MP4, M4A, MP3 o WAV · hasta " +
+                  bytes(preferences.data?.max_upload_bytes ?? 4294967296)}
+            </span>
+            <input
+              aria-label="Grabación"
+              type="file"
+              required={!draft}
+              accept=".mp4,.m4a,.mp3,.wav"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <div className="section-number">
+            03 <h2>La transcripción</h2>
+          </div>
+          <div className="two-columns">
+            <TextField label="Perfil de rendimiento">
+              <select {...form.register("profile")}>
+                <option value="economy">Económico · base · 2 hilos</option>
+                <option value="balanced">Equilibrado · small · 3 hilos</option>
+                <option value="quality">Calidad · medium · 3 hilos</option>
+              </select>
+            </TextField>
+            <TextField label="Idioma">
+              <select {...form.register("language")}>
+                <option value="es">Español</option>
+                <option value="auto">Detección automática</option>
+              </select>
+            </TextField>
+          </div>
+          {profile === "quality" && (
+            <p className="notice">
+              El modelo medium consume más memoria. Puede requerir aumentar
+              WORKER_MEM_LIMIT antes de usarlo.
+            </p>
+          )}
+          {draft && (
+            <p className="notice">
+              La reunión ya está registrada. Si la carga falla puedes reintentar
+              aquí o abrirla desde Reuniones.
+            </p>
+          )}
+          <Button disabled={action.busy}>
+            {action.busy
+              ? "Enviando y validando grabación…"
+              : "Guardar reunión"}
+            <ArrowRight size={17} />
+          </Button>
+        </form>
+        <aside className="guide-card">
+          <span className="round-icon">
+            <Waves size={23} />
+          </span>
+          <h2>Tú marcas el ritmo.</h2>
+          <ol>
+            <li>
+              <strong>Carga</strong>
+              <p>El archivo se valida y se guarda en tu equipo.</p>
+            </li>
+            <li>
+              <strong>Transcribe</strong>
+              <p>Inicia el procesamiento local cuando sea oportuno.</p>
+            </li>
+            <li>
+              <strong>Revisa y analiza</strong>
+              <p>Corrige el texto antes de autorizar su envío a ChatGPT.</p>
+            </li>
+          </ol>
+          <div className="subtle-divider" />
+          <p>
+            Un solo trabajo pesado a la vez. Sin GPU dedicada y sin cambios
+            automáticos en WSL2.
+          </p>
+        </aside>
+      </div>
+    </>
+  );
+}

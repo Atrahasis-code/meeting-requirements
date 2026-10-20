@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    environment:
+      POSTGRES_USER: meeting
+      POSTGRES_PASSWORD: isolated-test-password
+      POSTGRES_DB: mra_test
+    volumes: [postgres-test:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U meeting -d mra_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  initialize:
+    environment:
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting:isolated-test-password@postgres/mra_test
+    depends_on:
+      postgres:
+        condition: service_healthy
+  backend:
+    environment:
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting:isolated-test-password@postgres/mra_test
+      MRA_TEST_DATABASE_CONNECTION: postgresql+psycopg://meeting:isolated-test-password@postgres/mra_test
+  worker:
+    environment:
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting:isolated-test-password@postgres/mra_test
+volumes:
+  postgres-test:

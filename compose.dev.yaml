@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      target: development
+    volumes:
+      - ./backend/app:/app/app:ro
+  worker:
+    build:
+      target: development
+    volumes:
+      - ./backend/app:/app/app:ro
+  frontend:
+    build:
+      target: development
+    read_only: false
+    cpus: ${DEV_FRONTEND_CPUS:-1}
+    mem_limit: ${DEV_FRONTEND_MEM_LIMIT:-512m}
+    volumes:
+      - ./frontend/src:/app/src:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

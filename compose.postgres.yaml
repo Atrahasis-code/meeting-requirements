@@ -1,0 +1,55 @@
+services:
+  database-secrets:
+    build: {context: ., dockerfile: backend/Dockerfile, target: runtime}
+    user: "0:0"
+    command: [python, -m, app.prepare_database_secret]
+    secrets: [postgres_password]
+    volumes: [postgres-server-password:/server,postgres-application-password:/application]
+    restart: "no"
+  postgres:
+    image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    environment:
+      POSTGRES_DB: meeting
+      POSTGRES_USER: meeting
+      POSTGRES_PASSWORD_FILE: /credentials/password
+    volumes: [postgres:/var/lib/postgresql/data,postgres-server-password:/credentials:ro]
+    depends_on:
+      database-secrets: {condition: service_completed_successfully}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U meeting -d meeting"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    cpus: ${POSTGRES_CPUS:-0.5}
+    mem_limit: ${POSTGRES_MEM_LIMIT:-512m}
+  initialize:
+    environment:
+      MRA_DATABASE_PASSWORD_FILE: /credentials/password
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting@postgres:5432/meeting
+    volumes: [postgres-application-password:/credentials:ro]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  backend:
+    environment:
+      MRA_DATABASE_PASSWORD_FILE: /credentials/password
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting@postgres:5432/meeting
+    volumes: [postgres-application-password:/credentials:ro]
+  worker:
+    environment:
+      MRA_DATABASE_PASSWORD_FILE: /credentials/password
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting@postgres:5432/meeting
+    volumes: [postgres-application-password:/credentials:ro]
+  maintenance:
+    environment:
+      MRA_DATABASE_PASSWORD_FILE: /credentials/password
+      MRA_DATABASE_CONNECTION: postgresql+psycopg://meeting@postgres:5432/meeting
+    volumes: [postgres-application-password:/credentials:ro]
+volumes:
+  postgres-server-password:
+  postgres-application-password:
+  postgres:
+secrets:
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_FILE:?Set POSTGRES_PASSWORD_FILE to a private password file}
