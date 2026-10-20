@@ -2,6 +2,8 @@
 
 # Meeting Requirements AI
 
+[![Docker Compose tests](https://github.com/Atrahasis-code/meeting-requirements/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Atrahasis-code/meeting-requirements/actions/workflows/ci.yml)
+
 **Turn meeting recordings into reviewable requirements, backed by the conversation.**
 
 A self-hosted workspace for recording review, local transcription, AI-assisted analysis, and explicit human approval. Run the complete application with Docker Compose. Keep the original text, follow every requirement back to its evidence, and export a versioned specification when you are ready.
