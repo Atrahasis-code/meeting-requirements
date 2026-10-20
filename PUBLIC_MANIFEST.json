@@ -3,7 +3,7 @@
   "files": {
     ".dockerignore": "5b79fd3f641b6b3c33e4ed35c7b50760c71b4257c23b4c34633f268a15db1636",
     ".env.example": "873d27b0acfbac1aca9e3ae6a16cf550e0b9e120b4e75ac3121df16aadb3eafa",
-    ".github/workflows/ci.yml": "4c325881e492fffae8269306f9187796edcfc0e4997fb9990db252ca09ec3bd5",
+    ".github/workflows/ci.yml": "528b34d3b619f35b05cfd448e134c98eb636c26666f9007267b1859247f5f77f",
     ".gitignore": "469ffd4b288714eb159dafffce2e6a96cc2bf638b5ffe432ae334e784e902677",
     "AGENTS.md": "4bca81c44bad1a955982793a7118c6758e717231a061e6d79e7d9017dcfdff36",
     "LICENSE": "f42721db8002cca3548f5c9e50010ff5de7d9febd9942352f9b0a0d559941f79",
