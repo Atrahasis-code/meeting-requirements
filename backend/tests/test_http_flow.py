@@ -138,7 +138,35 @@ def test_loopback_full_flow_with_worker_criteria_and_immutable_exports(hostname)
             saved = checked(client, "GET", meeting_path + "/transcript").json()["segments"][0]
             assert saved["original_text"] == segment["original_text"]
             assert saved["revised_text"] == reviewed and saved["reviewed"] is True
+            # Reversible exclusion is enforced through the real proxy/API, not just the UI.
+            current_revision = checked(client, "GET", meeting_path + "/transcript").json()["revision"]
+            discarded = checked(
+                client,
+                "PATCH",
+                "/api/transcript-segments/" + segment["id"],
+                json={"revision": current_revision, "discarded": True},
+            ).json()
+            assert discarded["segment"]["discarded"] and not discarded["segment"]["reviewed"]
+            excluded = checked(client, "GET", meeting_path + "/analysis-input").json()
+            assert excluded["snapshot"]["segments"] == []
+            assert excluded["snapshot"]["selection_summary"]["discarded"] == 1
+            checked(
+                client,
+                "POST",
+                meeting_path + "/analyze",
+                422,
+                json={"input_hash": excluded["input_hash"], "consent": True},
+            )
+            downloaded = checked(client, "GET", meeting_path + "/transcript/download?format=json").json()
+            assert downloaded[0]["discarded"] and downloaded[0]["original_text"] == segment["original_text"]
+            checked(
+                client,
+                "PATCH",
+                "/api/transcript-segments/" + segment["id"],
+                json={"revision": discarded["revision"], "reviewed": True},
+            )
             entry = checked(client, "GET", meeting_path + "/analysis-input").json()
+            assert entry["snapshot"]["selection_policy"] == "reviewed_only_v1"
             assert entry["snapshot"]["provider"] == "mock"
             assert entry["snapshot"]["segments"][0]["text"] == reviewed
             job = checked(

@@ -34,7 +34,7 @@ import {
   useAction,
   useData,
 } from "../components/shared";
-import { api, patch, post, remove } from "../lib/api";
+import { ApiError, api, patch, post, remove } from "../lib/api";
 import { bytes, date, label, time, actorLabel } from "../lib/utils";
 import type {
   Analysis,
@@ -46,6 +46,7 @@ import type {
   Transcript,
 } from "../types";
 import { CriterionActions } from "../components/criterion-actions";
+import { CriterionRevisionComparison } from "../components/criterion-history";
 import { RequirementTable } from "./requirements";
 
 const active = (job: Job) =>
@@ -128,6 +129,7 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
   const [consent, setConsent] = useState(false);
   const action = useAction();
   const navigate = useNavigate();
+  useEffect(() => setConsent(false), [input.data?.input_hash]);
   const blocked = meeting.jobs.find(
     (j) => j.status === "blocked" && j.kind === "analyze",
   );
@@ -159,9 +161,13 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
               <span>
                 {input.data.snapshot.provider === "mock"
                   ? t("Proveedor Mock: simulación local, sin envío externo.")
-                  : t(
-                      "Se enviará únicamente este texto y contexto a ChatGPT mediante tu plan. El audio permanece local.",
-                    )}
+                  : input.data.snapshot.provider === "commercial"
+                    ? t(
+                        "Se enviará únicamente este texto y contexto al proveedor comercial configurado para tu organización.",
+                      )
+                    : t(
+                        "Se enviará únicamente este texto y contexto a ChatGPT mediante tu plan. El audio permanece local.",
+                      )}
               </span>
             </div>
             <div className="inline-meta">
@@ -175,6 +181,43 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
                 {input.data.snapshot.revision}
               </span>
             </div>
+            <div className="selection-summary" role="status">
+              <span>
+                {t("Revisados: {count}", {
+                  count: input.data.snapshot.selection_summary.reviewed,
+                })}
+              </span>
+              <span>
+                {t("Descartados: {count}", {
+                  count: input.data.snapshot.selection_summary.discarded,
+                })}
+              </span>
+              <span>
+                {t("Pendientes: {count}", {
+                  count: input.data.snapshot.selection_summary.pending,
+                })}
+              </span>
+            </div>
+            <p className="selection-help">
+              {t(
+                "Solo se analizarán los bloques revisados con texto. Los pendientes y descartados no se enviarán.",
+              )}
+            </p>
+            {!input.data.snapshot.segments.length && (
+              <div className="notice">
+                <p>
+                  {t(
+                    "Marca como revisado al menos un bloque con texto antes de analizar",
+                  )}
+                </p>
+                <Link
+                  to={"/meetings/" + meeting.id + "/transcript"}
+                  onClick={() => setOpen(false)}
+                >
+                  {t("Abrir transcripción")}
+                </Link>
+              </div>
+            )}
             <TextField label={t("Contexto y glosario")}>
               <textarea
                 rows={3}
@@ -208,7 +251,12 @@ export function AnalysisButton({ meeting }: { meeting: Meeting }) {
               )}
             </label>
             <Button
-              disabled={!consent || action.busy}
+              disabled={
+                !consent ||
+                action.busy ||
+                input.isFetching ||
+                !input.data.snapshot.segments.length
+              }
               onClick={() =>
                 void action.run(async () => {
                   const path = blocked
@@ -425,7 +473,22 @@ export function MeetingPage() {
   );
 }
 
-type Draft = { revised_text: string; reviewed: boolean; doubtful: boolean };
+type Draft = {
+  revised_text: string;
+  reviewed: boolean;
+  discarded: boolean;
+};
+type SelectionState = "pending" | "reviewed" | "discarded";
+const segmentState = (value: {
+  reviewed: boolean;
+  discarded: boolean;
+}): SelectionState =>
+  value.discarded ? "discarded" : value.reviewed ? "reviewed" : "pending";
+const selectionLabels = {
+  pending: "Pendiente",
+  reviewed: "Revisado",
+  discarded: "Descartado",
+} as const;
 export function TranscriptPage() {
   useI18n();
   const { id } = useParams();
@@ -434,6 +497,8 @@ export function TranscriptPage() {
   const meeting = useData<Meeting>("/meetings/" + id, true);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<SelectionState | "all">("all");
+  const [saveError, setSaveError] = useState<Error | null>(null);
   const [current, setCurrent] = useState(0);
   const video = useRef<HTMLVideoElement>(null);
   const action = useAction();
@@ -485,7 +550,7 @@ export function TranscriptPage() {
       drafts[segment.id] ?? {
         revised_text: segment.revised_text ?? segment.original_text,
         reviewed: segment.reviewed,
-        doubtful: segment.doubtful,
+        discarded: segment.discarded,
       }
     );
   }
@@ -497,24 +562,36 @@ export function TranscriptPage() {
   }
   async function save() {
     let revision = transcript.revision;
-    for (const [segment_id, value] of Object.entries(drafts)) {
-      const result = await patch<{ revision: number }>(
-        "/transcript-segments/" + segment_id,
-        { ...value, revision },
-      );
-      revision = result.revision;
-      setDrafts((old) => {
-        const next = { ...old };
-        delete next[segment_id];
-        return next;
-      });
+    try {
+      for (const [segment_id, value] of Object.entries(drafts)) {
+        const result = await patch<{ revision: number }>(
+          "/transcript-segments/" + segment_id,
+          { ...value, revision },
+        );
+        revision = result.revision;
+        setDrafts((old) => {
+          const next = { ...old };
+          delete next[segment_id];
+          return next;
+        });
+      }
+      setSaveError(null);
+      return revision;
+    } catch (error) {
+      setSaveError(error as Error);
+      throw error;
     }
-    return revision;
   }
-  const filtered = transcript.segments.filter((s) =>
-    (draft(s).revised_text + " " + s.original_text)
-      .toLowerCase()
-      .includes(search.toLowerCase()),
+  const counts = { pending: 0, reviewed: 0, discarded: 0 };
+  transcript.segments.forEach(
+    (segment) => counts[segmentState(draft(segment))]++,
+  );
+  const filtered = transcript.segments.filter(
+    (s) =>
+      (filter === "all" || segmentState(draft(s)) === filter) &&
+      (draft(s).revised_text + " " + s.original_text)
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
   return (
     <>
@@ -532,7 +609,11 @@ export function TranscriptPage() {
               </Link>
             </Button>
             <Button
-              disabled={!dirty || action.busy}
+              disabled={
+                !dirty ||
+                action.busy ||
+                (saveError instanceof ApiError && saveError.status === 409)
+              }
               onClick={() => void action.run(save, t("Correcciones guardadas"))}
             >
               {dirty
@@ -605,7 +686,56 @@ export function TranscriptPage() {
           </small>
         </aside>
         <section>
+          <div className="selection-summary" aria-live="polite">
+            <span>{t("Revisados: {count}", { count: counts.reviewed })}</span>
+            <span>
+              {t("Descartados: {count}", { count: counts.discarded })}
+            </span>
+            <span>{t("Pendientes: {count}", { count: counts.pending })}</span>
+          </div>
+          <p className="selection-help">
+            {t(
+              "Revisado incluye el bloque en el análisis. Descartado lo conserva sin enviarlo.",
+            )}
+          </p>
+          {saveError && (
+            <div className="error-box" role="alert">
+              <p>{translateMessage(saveError.message)}</p>
+              <p>
+                {t(
+                  "Tu borrador se conserva. Carga la revisión vigente y compárala antes de volver a guardar.",
+                )}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void action.run(async () => {
+                    await query.refetch({ throwOnError: true });
+                    setSaveError(null);
+                  })
+                }
+              >
+                {t("Cargar revisión vigente")}
+              </Button>
+            </div>
+          )}
           <div className="toolbar">
+            <label className="selection-filter">
+              {t("Filtrar bloques")}
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as typeof filter)}
+              >
+                <option value="all">{t("Todos los bloques")}</option>
+                {(["pending", "reviewed", "discarded"] as const).map(
+                  (state) => (
+                    <option key={state} value={state}>
+                      {t(selectionLabels[state])}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
             <div className="search-field">
               <Search size={16} />
               <input
@@ -638,6 +768,11 @@ export function TranscriptPage() {
             />
           ) : (
             <div className="segments">
+              {!filtered.length && (
+                <p className="notice">
+                  {t("No hay bloques que coincidan con este filtro.")}
+                </p>
+              )}
               {filtered.map((segment) => {
                 const value = draft(segment);
                 return (
@@ -649,7 +784,7 @@ export function TranscriptPage() {
                       (current >= segment.start && current < segment.end
                         ? "segment-active "
                         : "") +
-                      (value.doubtful ? "segment-doubtful" : "")
+                      (value.discarded ? "segment-discarded" : "")
                     }
                   >
                     <div className="segment-header">
@@ -667,35 +802,52 @@ export function TranscriptPage() {
                         {time(segment.start)} – {time(segment.end)}
                       </button>
                       <div className="segment-checks">
-                        <label>
-                          <input
-                            type="checkbox"
-                            disabled={!transcript.complete}
-                            checked={value.reviewed}
-                            onChange={(e) =>
-                              update(segment, { reviewed: e.target.checked })
-                            }
-                          />
-                          {t("Revisado")}
-                        </label>
-                        <label>
-                          <input
-                            type="checkbox"
-                            disabled={!transcript.complete}
-                            checked={value.doubtful}
-                            onChange={(e) =>
-                              update(segment, { doubtful: e.target.checked })
-                            }
-                          />
-                          {t("Por comprobar")}
-                        </label>
+                        <span className="segment-state">
+                          {t(selectionLabels[segmentState(value)])}
+                        </span>
                       </div>
                     </div>
+                    <fieldset
+                      className="segment-selection"
+                      disabled={!transcript.complete || action.busy}
+                    >
+                      <legend className="sr-only">
+                        {t("Selección del bloque {time}", {
+                          time: time(segment.start),
+                        })}
+                      </legend>
+                      {(["reviewed", "discarded", "pending"] as const).map(
+                        (state) => (
+                          <label
+                            key={state}
+                            className={
+                              segmentState(value) === state
+                                ? "selection-chosen"
+                                : ""
+                            }
+                          >
+                            <input
+                              type="radio"
+                              name={"selection-" + segment.id}
+                              value={state}
+                              checked={segmentState(value) === state}
+                              onChange={() =>
+                                update(segment, {
+                                  reviewed: state === "reviewed",
+                                  discarded: state === "discarded",
+                                })
+                              }
+                            />
+                            {t(selectionLabels[state])}
+                          </label>
+                        ),
+                      )}
+                    </fieldset>
                     <textarea
                       aria-label={
                         t("Texto del segmento") + " " + time(segment.start)
                       }
-                      disabled={!transcript.complete}
+                      disabled={!transcript.complete || action.busy}
                       value={value.revised_text}
                       rows={Math.min(
                         7,
@@ -705,9 +857,16 @@ export function TranscriptPage() {
                         update(segment, {
                           revised_text: e.target.value,
                           reviewed: false,
+                          discarded: false,
                         })
                       }
                     />
+                    {saveError && drafts[segment.id] && (
+                      <details open>
+                        <summary>{t("Texto guardado actualmente")}</summary>
+                        <p>{segment.revised_text ?? segment.original_text}</p>
+                      </details>
+                    )}
                     {value.revised_text !== segment.original_text && (
                       <details>
                         <summary>{t("Ver texto original")}</summary>
@@ -836,6 +995,14 @@ export function ResultsPage() {
               </Button>
             )}
           </div>
+          {(run.input_snapshot.revision !== meeting.data.transcript_revision ||
+            run.input_snapshot.selection_policy !== "reviewed_only_v1") && (
+            <p className="notice">
+              {t(
+                "Esta versión conserva la entrada autorizada originalmente. Para aplicar la selección actual, genera un nuevo análisis.",
+              )}
+            </p>
+          )}
           {run.provider === "mock" && (
             <div className="notice">
               {t(
@@ -1042,20 +1209,11 @@ function ResultContent({ run, tab }: { run: Analysis; tab: string }) {
                         {" " + t("· Estado posterior:") + " "}
                         {criterionStatus(revision.after.status)}
                       </p>
-                      <dl className="criterion">
-                        <dt>{t("Dado anterior")}</dt>
-                        <dd>{revision.before.given}</dd>
-                        <dt>{t("Cuando anterior")}</dt>
-                        <dd>{revision.before.when}</dd>
-                        <dt>{t("Entonces anterior")}</dt>
-                        <dd>{revision.before.then}</dd>
-                        <dt>{t("Dado revisado")}</dt>
-                        <dd>{revision.after.given}</dd>
-                        <dt>{t("Cuando revisado")}</dt>
-                        <dd>{revision.after.when}</dd>
-                        <dt>{t("Entonces revisado")}</dt>
-                        <dd>{revision.after.then}</dd>
-                      </dl>
+                      <CriterionRevisionComparison
+                        revision={revision}
+                        revisionNumber={index + 1}
+                        code={c.code}
+                      />
                     </section>
                   ))}
                 </details>

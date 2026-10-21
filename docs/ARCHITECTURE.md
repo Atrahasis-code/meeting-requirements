@@ -60,3 +60,11 @@ SQLite retains WAL and its connection settings. PostgreSQL is opt-in through a C
 English and Spanish use bundled application-message catalogs; Spanish is the default. The selector updates the UI without reloading, keeps drafts mounted, persists `mra-language` in browser storage, and synchronizes open tabs on the same origin. If storage is unavailable, the selection still works for the current page. HTML language metadata, dates, numbers, and plural labels follow the selection.
 
 This preference is independent of the recording's transcription language and never changes meeting content, analysis snapshots, API resource identifiers, original text, or exports. Only static application messages are translated; unknown provider diagnostics retain their original text. There are no translation-service calls or additional runtime dependencies. Custom application entrypoints may register their own static UI catalogs; none are loaded by the community entrypoint unless explicitly imported.
+
+## Human selection before analysis
+
+Transcript blocks retain `reviewed` and add `discarded` (false by default). A database constraint forbids both flags being true. Both false means pending. PATCH normalizes the opposite flag when reviewing/discarding; real text changes reset the decision unless explicitly reconfirmed. No-op updates preserve the transcript revision. Original text, block IDs and recording timestamps are never removed by exclusion.
+
+Analysis snapshots carry `selection_policy: reviewed_only_v1`, selection counts and only reviewed, non-discarded, nonempty blocks in temporal order. The complete snapshot is hashed and checked at admission. The worker executes the immutable authorized input, so later selection changes apply only to later analyses. Legacy jobs without the policy block before accessing the provider and require renewed review/consent; changed hashes never reuse checkpoints. Completed analyses, evidence and exports keep their earlier input.
+
+The additive 0004 migration preserves existing reviewed flags and defaults discarded to false, without rebuilding SQLite tables or replacing tenant triggers. JSON transcript downloads include selection flags; TXT/SRT/VTT downloads remain complete. Analysis exports continue using their persisted input snapshot.

@@ -44,6 +44,7 @@ export interface Segment {
   original_text: string;
   revised_text: string | null;
   reviewed: boolean;
+  discarded: boolean;
   doubtful: boolean;
   detection: Record<string, unknown>;
 }
@@ -121,7 +122,7 @@ export interface Analysis {
   active: boolean;
   original_result: Result;
   code_mapping?: Record<string, string>;
-  input_snapshot: { revision: number };
+  input_snapshot: { revision: number; selection_policy?: string };
   requirements: Requirement[];
   criteria?: (Result["criteria"][number] & {
     id: string;
@@ -170,6 +171,14 @@ export interface AuthStatus {
 export interface AnalysisInput {
   input_hash: string;
   snapshot: {
+    selection_policy: "reviewed_only_v1";
+    selection_summary: {
+      total: number;
+      reviewed: number;
+      discarded: number;
+      pending: number;
+      included: number;
+    };
     provider: string;
     model: string | null;
     context: string;

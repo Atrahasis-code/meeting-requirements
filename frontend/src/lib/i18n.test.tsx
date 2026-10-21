@@ -339,3 +339,13 @@ it("does not render Pydantic English errors or submitted input from a structured
     "The request is invalid.",
   );
 });
+
+it("translates safe consolidation failures without treating them as provider validation", () => {
+  const message =
+    "No se pudo consolidar el análisis guardado: un requisito depende de otro requisito inexistente. Se conservaron los fragmentos válidos para revisión y reintento manual.";
+  act(() => setLanguage("en"));
+  const translated = translateMessage(message);
+  expect(translated).toContain("The saved analysis could not be consolidated:");
+  expect(translated).not.toContain("un requisito");
+  expect(translated).toContain("manual retry");
+});

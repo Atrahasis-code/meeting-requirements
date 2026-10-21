@@ -330,7 +330,7 @@ def analyze(identity: str, payload: s.AnalysisRequest, session: Session = DB):
     if payload.input_hash != input_hash(data):
         raise HTTPException(409, "Cambió la entrada; revisa el texto y autoriza nuevamente")
     if not any(segment["text"].strip() for segment in data["segments"]):
-        raise HTTPException(422, "La transcripción está vacía")
+        raise HTTPException(422, "Marca como revisado al menos un bloque con texto antes de analizar")
     if data["provider"] != "mock":
         if not payload.consent:
             raise HTTPException(403, "Se requiere autorización explícita para enviar el texto")
@@ -443,6 +443,27 @@ def edit_segment(identity: str, payload: s.TranscriptPatch, session: Session = D
     meeting = get(session, m.Meeting, segment.meeting_id)
     if not meeting.transcript_revision:
         raise HTTPException(409, "La transcripción todavía es parcial")
+    if payload.revision != meeting.transcript_revision:
+        raise HTTPException(409, "La transcripción cambió; recarga antes de guardar")
+    values = payload.model_dump(exclude_unset=True, exclude={"revision"})
+    if values.get("reviewed") and values.get("discarded"):
+        raise HTTPException(422, "Un bloque no puede estar revisado y descartado a la vez")
+    if values.get("reviewed"):
+        values["discarded"] = False
+    elif values.get("discarded"):
+        values["reviewed"] = False
+    if "revised_text" in values:
+        # Text changes invalidate a previous decision, unless explicitly reconfirmed.
+        from .transcripts import text
+
+        effective = values["revised_text"] if values["revised_text"] is not None else segment.original_text
+        if effective == text(segment):
+            values.pop("revised_text")
+        elif not values.get("reviewed") and not values.get("discarded"):
+            values.update(reviewed=False, discarded=False)
+    values = {key: value for key, value in values.items() if getattr(segment, key) != value}
+    if not values:
+        return {"segment": serialize(segment), "revision": meeting.transcript_revision}
     # Atomic revision comparison prevents lost updates from multiple browser tabs.
     from sqlalchemy import update
 
@@ -453,9 +474,8 @@ def edit_segment(identity: str, payload: s.TranscriptPatch, session: Session = D
     )
     if not result.rowcount:
         raise HTTPException(409, "La transcripción cambió; recarga antes de guardar")
-    for key, value in payload.model_dump(exclude_unset=True).items():
-        if key != "revision":
-            setattr(segment, key, value)
+    for key, value in values.items():
+        setattr(segment, key, value)
     if meeting.status == "transcribed":
         meeting.status = "in_review"
     session.commit()

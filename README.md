@@ -51,6 +51,12 @@ docker compose exec backend python -m app.seed
 
 Each run creates a new DEMO project with a simulated transcript and clearly labeled Mock results. It does not contact ChatGPT or change your configured provider. For a new analysis without authentication, select **Mock** in **Configuración**. Simulated transcription is available only in test environments; normal recording transcription uses faster-whisper.
 
+### Select the relevant transcript blocks
+
+In transcript review, mark each block **Reviewed**, **Discarded**, or leave it **Pending**. Only reviewed blocks with text enter a new analysis; you can analyze a selection while other blocks remain pending.
+
+Save your changes, then inspect the exact text in the analysis confirmation. Discarding is reversible and preserves the recording, original text, corrections, and timestamps. Editing text returns that block to pending until you explicitly decide again. Full transcript downloads retain every block; the reviewed transcript in an analysis export contains that analysis's authorized selection. Earlier analyses and exports remain unchanged.
+
 ## Features
 
 | Workflow | What you can do |

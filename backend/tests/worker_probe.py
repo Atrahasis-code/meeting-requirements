@@ -40,7 +40,11 @@ def prepare():
             )[:9000]
             session.add(
                 m.TranscriptSegment(
-                    meeting_id=identity, start=index * 10, end=index * 10 + 8, original_text=content
+                    meeting_id=identity,
+                    start=index * 10,
+                    end=index * 10 + 8,
+                    original_text=content,
+                    reviewed=True,
                 )
             )
     with httpx.Client(base_url="http://127.0.0.1:8000", timeout=60) as client:

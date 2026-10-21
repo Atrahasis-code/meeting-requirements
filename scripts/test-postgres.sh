@@ -5,6 +5,6 @@ compose() { docker compose -p meeting-ai-pg-test -f compose.yaml -f compose.test
 trap 'compose down' EXIT INT TERM
 compose build backend worker initialize frontend integration-tests
 compose up -d --wait postgres
-compose run --rm backend pytest tests/test_flow.py tests/test_postgres.py
+compose run --rm backend pytest tests/test_flow.py tests/test_postgres.py tests/test_transcript_selection.py
 compose up -d --wait backend worker frontend
 compose run --rm integration-tests

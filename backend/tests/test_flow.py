@@ -15,6 +15,16 @@ def process_transcription(client, identity):
 
 
 def process_analysis(client, identity):
+    # Existing synthetic workflows explicitly confirm their input before analysis.
+    transcript = client.get(f"/api/meetings/{identity}/transcript").json()
+    for segment in transcript["segments"]:
+        if not segment["reviewed"] and not segment["discarded"]:
+            saved = client.patch(
+                f"/api/transcript-segments/{segment['id']}",
+                json={"revision": transcript["revision"], "reviewed": True},
+            )
+            assert saved.status_code == 200, saved.text
+            transcript["revision"] = saved.json()["revision"]
     data = client.get(f"/api/meetings/{identity}/analysis-input").json()
     response = client.post(
         f"/api/meetings/{identity}/analyze", json={"input_hash": data["input_hash"], "consent": True}

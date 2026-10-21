@@ -45,7 +45,8 @@ class MeetingInput(StrictModel):
 
 class TranscriptPatch(StrictModel):
     revised_text: str | None = Field(default=None, max_length=10000)
-    reviewed: bool | None = None
+    reviewed: bool = False
+    discarded: bool = False
     doubtful: bool | None = None
     revision: int
 

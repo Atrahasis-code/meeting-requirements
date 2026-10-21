@@ -1,4 +1,39 @@
 export const english = {
+  Anterior: "Previous",
+  "Comparación de la revisión {revision} de {code}":
+    "Comparison of revision {revision} of {code}",
+  "Desplázate horizontalmente para comparar ambas versiones.":
+    "Scroll horizontally to compare both versions.",
+  "No se pudo consolidar el análisis guardado: {diagnostic}. Se conservaron los fragmentos válidos para revisión y reintento manual.":
+    "The saved analysis could not be consolidated: {diagnostic}. Valid blocks were preserved for review and manual retry.",
+  "Esta versión conserva la entrada autorizada originalmente. Para aplicar la selección actual, genera un nuevo análisis.":
+    "This version preserves the originally authorized input. To apply the current selection, generate a new analysis.",
+  "Se enviará únicamente este texto y contexto al proveedor comercial configurado para tu organización.":
+    "Only this text and context will be sent to the commercial provider configured for your organization.",
+  Pendiente: "Pending",
+  Descartado: "Discarded",
+  "Revisados: {count}": "Reviewed: {count}",
+  "Descartados: {count}": "Discarded: {count}",
+  "Pendientes: {count}": "Pending: {count}",
+  "Solo se analizarán los bloques revisados con texto. Los pendientes y descartados no se enviarán.":
+    "Only reviewed blocks with text will be analyzed. Pending and discarded blocks will not be sent.",
+  "Marca como revisado al menos un bloque con texto antes de analizar":
+    "Mark at least one block with text as reviewed before analyzing",
+  "Un bloque no puede estar revisado y descartado a la vez":
+    "A block cannot be reviewed and discarded at the same time",
+  "Revisa los bloques y autoriza nuevamente el análisis; cambió la política de selección":
+    "Review the blocks and authorize the analysis again; the selection policy has changed",
+  "Revisado incluye el bloque en el análisis. Descartado lo conserva sin enviarlo.":
+    "Reviewed includes the block in the analysis. Discarded keeps it without sending it.",
+  "Tu borrador se conserva. Carga la revisión vigente y compárala antes de volver a guardar.":
+    "Your draft is preserved. Load the current revision and compare it before saving again.",
+  "Filtrar bloques": "Filter blocks",
+  "Todos los bloques": "All blocks",
+  "No hay bloques que coincidan con este filtro.":
+    "No blocks match this filter.",
+  "Selección del bloque {time}": "Block selection at {time}",
+  "Texto guardado actualmente": "Currently saved text",
+
   Guardar: "Save",
   "Idioma de transcripción": "Transcription language",
   Inglés: "English",

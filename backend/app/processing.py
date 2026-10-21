@@ -4,15 +4,16 @@ import time
 import subprocess
 import uuid
 from sqlalchemy import select
+from pydantic import ValidationError
 from .config import settings
 from .db import SessionLocal
 from . import models as m
 from .repository import get
 from .media import safe_path
 from .transcripts import write_transcripts
-from .analysis import split_input, validate_evidence, merge_results, store_result
+from .analysis import split_input, validate_evidence, merge_results, store_result, require_selection
 from .schemas import AnalysisResult
-from .providers import provider
+from .providers import provider, ProviderBlocked, analysis_validation_diagnostic
 
 PROFILES = {"economy": ("base", 2), "balanced": ("small", 3), "quality": ("medium", 3)}
 
@@ -190,6 +191,7 @@ def transcribe(job_id, cancelled):
 def analyze(job_id, cancelled):
     with SessionLocal() as session:
         job = get(session, m.ProcessingJob, job_id)
+        require_selection(job.params["snapshot"])
         from .runtime import runtime
 
         data, cached = runtime.analysis_data(job, job.params["snapshot"]), job.checkpoint.get("blocks", [])
@@ -206,7 +208,16 @@ def analyze(job_id, cancelled):
             get(session, m.ProcessingJob, job_id).checkpoint = {"blocks": [r.model_dump() for r in results]}
     if cancelled.is_set():
         raise InterruptedError()
-    result = validate_evidence(merge_results(results), data)
+    try:
+        merged = merge_results(results)
+    except ValidationError as error:
+        raise ProviderBlocked(
+            "invalid_analysis_merge",
+            "No se pudo consolidar el análisis guardado: "
+            + analysis_validation_diagnostic(error)
+            + ". Se conservaron los fragmentos válidos para revisión y reintento manual.",
+        ) from None
+    result = validate_evidence(merged, data)
     with SessionLocal.begin() as session:
         store_result(session, get(session, m.ProcessingJob, job_id), result)
     if data["provider"] == "chatgpt":

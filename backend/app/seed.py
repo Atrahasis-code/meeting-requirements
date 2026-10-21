@@ -46,6 +46,7 @@ def main():
                     start=start,
                     end=start + 12,
                     original_text=content,
+                    reviewed=True,
                     detection={"synthetic_demo": True},
                 )
             )

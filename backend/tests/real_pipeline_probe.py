@@ -83,6 +83,14 @@ def main():
                     ).status_code
                     == 200
                 )
+            revision = transcript["revision"]
+            for segment in transcript["segments"]:
+                confirmed = client.patch(
+                    f"/api/transcript-segments/{segment['id']}",
+                    json={"revision": revision, "reviewed": True},
+                )
+                assert confirmed.status_code == 200
+                revision = confirmed.json()["revision"]
             entry = client.get(f"/api/meetings/{meeting['id']}/analysis-input").json()
             job = client.post(
                 f"/api/meetings/{meeting['id']}/analyze",

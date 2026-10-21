@@ -1,5 +1,18 @@
 from datetime import date
-from sqlalchemy import JSON, Boolean, Column, Date, Float, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    false,
+    Column,
+    Date,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .db import Base, Record
 
@@ -65,12 +78,14 @@ class ProcessingJob(Record, Base):
 
 class TranscriptSegment(Record, Base):
     __tablename__ = "transcript_segments"
+    __table_args__ = (CheckConstraint("NOT (reviewed AND discarded)", name="ck_transcript_selection"),)
     meeting_id: Mapped[str] = mapped_column(ForeignKey("meetings.id", ondelete="RESTRICT"), index=True)
     start: Mapped[float] = mapped_column(Float)
     end: Mapped[float] = mapped_column(Float)
     original_text: Mapped[str] = mapped_column(Text)
     revised_text: Mapped[str | None] = mapped_column(Text, default=None)
     reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
+    discarded: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     doubtful: Mapped[bool] = mapped_column(Boolean, default=False)
     detection: Mapped[dict] = mapped_column(JSON, default=dict)
     chunk_index: Mapped[int] = mapped_column(default=0)

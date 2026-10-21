@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ResultsPage } from "./meetings";
@@ -130,5 +136,41 @@ it.each([
     fireEvent.click(screen.getByText("Texto original generado"));
     expect(screen.getAllByText("Original entonces")[0]).toBeVisible();
     expect(generated.criteria[0].then).toBe("Original entonces");
+    fireEvent.click(screen.getByText("Historial de revisiones (1)"));
+    const table = screen.getByRole("table", {
+      name: "Comparación de la revisión 1 de CA-001",
+    });
+    expect(
+      within(table).getByRole("columnheader", { name: "Anterior" }),
+    ).toHaveAttribute("colspan", "3");
+    expect(
+      within(table).getByRole("columnheader", { name: "Revisado" }),
+    ).toHaveAttribute("scope", "colgroup");
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Anterior",
+      "Revisado",
+      "Dado",
+      "Cuando",
+      "Entonces",
+      "Dado",
+      "Cuando",
+      "Entonces",
+    ]);
+    expect(
+      within(table)
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Original dado",
+      "Original cuando",
+      "Original entonces",
+      "Dado revisado",
+      "Cuando revisado",
+      "Entonces verificable",
+    ]);
   },
 );

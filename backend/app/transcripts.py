@@ -23,6 +23,7 @@ def render_transcripts(segments):
             original_text=s.original_text,
             revised_text=s.revised_text,
             reviewed=s.reviewed,
+            discarded=s.discarded,
             doubtful=s.doubtful,
             detection=s.detection,
         )

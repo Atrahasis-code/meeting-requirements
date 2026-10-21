@@ -8,6 +8,18 @@ from .config import settings
 from .schemas import AnalysisResult
 from .transcripts import text
 
+SELECTION_POLICY = "reviewed_only_v1"
+
+
+def require_selection(data):
+    if data.get("selection_policy") != SELECTION_POLICY:
+        from .providers import ProviderBlocked
+
+        raise ProviderBlocked(
+            "review_required",
+            "Revisa los bloques y autoriza nuevamente el análisis; cambió la política de selección",
+        )
+
 
 def snapshot(session, meeting):
     project = get(session, m.Project, meeting.project_id)
@@ -23,6 +35,14 @@ def snapshot(session, meeting):
     from .auth import status
 
     return dict(
+        selection_policy=SELECTION_POLICY,
+        selection_summary=dict(
+            total=len(segments),
+            reviewed=sum(s.reviewed for s in segments),
+            discarded=sum(s.discarded for s in segments),
+            pending=sum(not s.reviewed and not s.discarded for s in segments),
+            included=sum(s.reviewed and not s.discarded and bool(text(s).strip()) for s in segments),
+        ),
         meeting_id=meeting.id,
         revision=meeting.transcript_revision,
         context=project.context,
@@ -31,7 +51,9 @@ def snapshot(session, meeting):
         account_id=status()["account_id"] if provider_name == "chatgpt" else None,
         model=options.get("model"),
         segments=[
-            dict(id=s.id, start=s.start, end=s.end, text=text(s), doubtful=s.doubtful) for s in segments
+            dict(id=s.id, start=s.start, end=s.end, text=text(s), doubtful=s.doubtful)
+            for s in segments
+            if s.reviewed and not s.discarded and text(s).strip()
         ],
     )
 
@@ -196,11 +218,16 @@ def merge_results(results):
                 mapping[req.code] = new_code
                 copy = req.model_copy(deep=True)
                 copy.code = new_code
+                # Dependencies still use block-local codes here. Start clean and
+                # translate them once the complete block mapping is available.
+                copy.dependencies = []
                 canonical[key] = copy
                 combined.requirements.append(copy)
         for req in result.requirements:
             target = next(r for r in combined.requirements if r.code == mapping[req.code])
-            target.dependencies = list(set(target.dependencies) | {mapping[c] for c in req.dependencies})
+            target.dependencies = list(
+                dict.fromkeys([*target.dependencies, *(mapping[c] for c in req.dependencies)])
+            )
         story_map = {}
         for story in result.stories:
             copy = story.model_copy(deep=True)
